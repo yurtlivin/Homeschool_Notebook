@@ -1,0 +1,81 @@
+{
+  "name": "CurriculumBook",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "kid": {
+      "type": "string",
+      "enum": [
+        "Tigerlily",
+        "Rowen",
+        "Both"
+      ]
+    },
+    "subject": {
+      "type": "string"
+    },
+    "grade_level": {
+      "type": "string"
+    },
+    "cover_image": {
+      "type": "string"
+    },
+    "units": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "pages": {
+            "type": "string"
+          },
+          "completed": {
+            "type": "boolean",
+            "default": false
+          },
+          "completion_date": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string"
+    },
+    "field_trips": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "unit_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "name",
+    "kid",
+    "subject"
+  ]
+}

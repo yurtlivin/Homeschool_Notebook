@@ -1,0 +1,49 @@
+{
+  "name": "Book",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "kid": {
+      "type": "string",
+      "enum": [
+        "Tigerlily",
+        "Rowen"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "reading",
+        "finished"
+      ],
+      "default": "reading"
+    },
+    "genre": {
+      "type": "string"
+    },
+    "rating": {
+      "type": "number"
+    },
+    "note": {
+      "type": "string"
+    },
+    "added_by": {
+      "type": "string",
+      "enum": [
+        "Matt",
+        "Alli"
+      ]
+    },
+    "date_added": {
+      "type": "string",
+      "format": "date"
+    }
+  },
+  "required": [
+    "title",
+    "kid",
+    "added_by"
+  ]
+}

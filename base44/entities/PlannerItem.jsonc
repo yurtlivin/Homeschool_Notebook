@@ -1,0 +1,49 @@
+{
+  "name": "PlannerItem",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "kid": {
+      "type": "string",
+      "enum": [
+        "Tigerlily",
+        "Rowen",
+        "Both"
+      ]
+    },
+    "subject": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "detail": {
+      "type": "string"
+    },
+    "sub_directions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "handoff_flag": {
+      "type": "boolean",
+      "default": false
+    },
+    "curriculum_book_id": {
+      "type": "string"
+    },
+    "curriculum_unit_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "date",
+    "kid",
+    "subject",
+    "title"
+  ]
+}

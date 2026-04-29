@@ -1,0 +1,45 @@
+{
+  "name": "CalendarEvent",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "time": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "school",
+        "appointment",
+        "field_trip",
+        "PE",
+        "milestone",
+        "other"
+      ]
+    },
+    "curriculum_unit_id": {
+      "type": "string"
+    },
+    "created_by": {
+      "type": "string",
+      "enum": [
+        "Matt",
+        "Alli"
+      ]
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "title",
+    "date",
+    "created_by"
+  ]
+}

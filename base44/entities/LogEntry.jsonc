@@ -1,0 +1,59 @@
+{
+  "name": "LogEntry",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "kid": {
+      "type": "string",
+      "enum": [
+        "Tigerlily",
+        "Rowen",
+        "Both"
+      ]
+    },
+    "logged_by": {
+      "type": "string",
+      "enum": [
+        "Matt",
+        "Alli"
+      ]
+    },
+    "content": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "milestone_flag": {
+      "type": "boolean",
+      "default": false
+    },
+    "curriculum_unit_id": {
+      "type": "string"
+    },
+    "curriculum_name": {
+      "type": "string"
+    },
+    "is_handoff_note": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "date",
+    "kid",
+    "logged_by"
+  ]
+}

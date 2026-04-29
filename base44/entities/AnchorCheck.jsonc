@@ -1,0 +1,47 @@
+{
+  "name": "AnchorCheck",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "kid": {
+      "type": "string",
+      "enum": [
+        "Tigerlily",
+        "Rowen",
+        "Both"
+      ]
+    },
+    "anchor_name": {
+      "type": "string"
+    },
+    "curriculum_name": {
+      "type": "string"
+    },
+    "completed": {
+      "type": "boolean",
+      "default": false
+    },
+    "note": {
+      "type": "string"
+    },
+    "photo": {
+      "type": "string"
+    },
+    "logged_by": {
+      "type": "string",
+      "enum": [
+        "Matt",
+        "Alli"
+      ]
+    }
+  },
+  "required": [
+    "date",
+    "kid",
+    "anchor_name",
+    "logged_by"
+  ]
+}
