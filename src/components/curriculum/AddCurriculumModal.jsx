@@ -13,7 +13,7 @@ const KIDS = [
 const EMPTY_ROW = () => ({ name: "", pages: "" });
 
 export default function AddCurriculumModal({ onClose, onAdded }) {
-  const [tab, setTab] = useState("scan"); // "scan" | "manual"
+  const [tab, setTab] = useState("scan"); // "scan" | "paste" | "manual"
 
   // Shared fields
   const [name, setName] = useState("");
@@ -32,6 +32,11 @@ export default function AddCurriculumModal({ onClose, onAdded }) {
 
   // Manual state
   const [rows, setRows] = useState([EMPTY_ROW(), EMPTY_ROW(), EMPTY_ROW()]);
+
+  // Paste text state
+  const [pastedText, setPastedText] = useState("");
+  const [parsingText, setParsingText] = useState(false);
+  const [parsedUnits, setParsedUnits] = useState([]);
 
   const handleImagePick = (e) => {
     const file = e.target.files?.[0];
@@ -90,6 +95,39 @@ Return ONLY a JSON object. Do not include markdown.`,
   const removeScannedUnit = (i) => setScannedUnits(prev => prev.filter((_, idx) => idx !== i));
   const addScannedUnit = () => setScannedUnits(prev => [...prev, { id: `u-${Date.now()}`, name: "", pages: "" }]);
 
+  const runParseText = async () => {
+    if (!pastedText.trim()) return;
+    setParsingText(true);
+    setParsedUnits([]);
+    const result = await base44.integrations.Core.InvokeLLM({
+      prompt: `You are analyzing a text paste of a curriculum book's table of contents or unit list.
+Extract all chapters, lessons, or units you can find.
+For each unit extract: name (the chapter/lesson title) and pages (page range as a string like "pp. 12–24", leave blank if not visible).
+Return ONLY a JSON object with a "units" array.`,
+      response_json_schema: {
+        type: "object",
+        properties: {
+          units: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                pages: { type: "string" }
+              }
+            }
+          }
+        }
+      }
+    });
+    setParsedUnits((result.units || []).map((u, i) => ({ ...u, id: `u-paste-${Date.now()}-${i}` })));
+    setParsingText(false);
+  };
+
+  const updateParsedUnit = (i, field, val) => setParsedUnits(prev => prev.map((u, idx) => idx === i ? { ...u, [field]: val } : u));
+  const removeParsedUnit = (i) => setParsedUnits(prev => prev.filter((_, idx) => idx !== i));
+  const addParsedUnit = () => setParsedUnits(prev => [...prev, { id: `u-${Date.now()}`, name: "", pages: "" }]);
+
   const updateRow = (i, field, val) => setRows(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: val } : r));
   const removeRow = (i) => setRows(prev => prev.filter((_, idx) => idx !== i));
   const addRow = () => setRows(prev => [...prev, EMPTY_ROW()]);
@@ -100,6 +138,8 @@ Return ONLY a JSON object. Do not include markdown.`,
     let units = [];
     if (tab === "scan") {
       units = scannedUnits.filter(u => u.name.trim()).map(u => ({ ...u, completed: false, resources: [] }));
+    } else if (tab === "paste") {
+      units = parsedUnits.filter(u => u.name.trim()).map(u => ({ ...u, completed: false, resources: [] }));
     } else {
       units = rows.filter(r => r.name.trim()).map((r, i) => ({
         id: `u-${Date.now()}-${i}`,
@@ -130,6 +170,7 @@ Return ONLY a JSON object. Do not include markdown.`,
         <div className="flex border-b border-border shrink-0">
           {[
             { id: "scan", label: "Scan with AI", icon: Sparkles },
+            { id: "paste", label: "Paste Text", icon: Plus },
             { id: "manual", label: "Enter manually", icon: Plus },
           ].map(({ id, label, icon: Icon }) => (
             <button
@@ -214,10 +255,72 @@ Return ONLY a JSON object. Do not include markdown.`,
                   </button>
                 </div>
               )}
-            </>
-          )}
+              </>
+              )}
 
-          {/* ── MANUAL TAB ── */}
+              {/* ── PASTE TAB ── */}
+              {tab === "paste" && (
+                <>
+                  <textarea
+                    value={pastedText}
+                    onChange={e => setPastedText(e.target.value)}
+                    placeholder="Paste your table of contents or unit list here... (e.g., 'Chapter 1: Intro pp.1-10\nChapter 2: Advanced pp.11-20')"
+                    rows={8}
+                    className="w-full text-sm border border-border rounded px-3 py-2 resize-none outline-none focus:border-[#534AB7]"
+                  />
+                  {!parsingText && parsedUnits.length === 0 && (pastedText.trim().length > 0) && (
+                    <button
+                      onClick={runParseText}
+                      className="w-full flex items-center justify-center gap-2 text-sm bg-[#534AB7] text-white py-2.5 rounded-lg hover:bg-[#4340a0]"
+                    >
+                      <Sparkles className="w-4 h-4" /> Process Text
+                    </button>
+                  )}
+
+                  {parsingText && (
+                    <div className="flex items-center justify-center gap-2 py-4 text-sm text-[#534AB7]">
+                      <div className="w-4 h-4 border-2 border-[#534AB7] border-t-transparent rounded-full animate-spin" />
+                      Parsing text with AI...
+                    </div>
+                  )}
+
+                  {parsedUnits.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-3.5 h-3.5 text-[#534AB7]" />
+                        <span className="text-xs font-medium text-[#534AB7]">AI parsed {parsedUnits.length} units — review &amp; edit below</span>
+                      </div>
+                      <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                        {parsedUnits.map((u, i) => (
+                          <div key={u.id} className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground w-5 shrink-0 text-right">{i + 1}.</span>
+                            <input
+                              value={u.name}
+                              onChange={e => updateParsedUnit(i, "name", e.target.value)}
+                              placeholder="Unit name"
+                              className="flex-1 text-xs border border-border rounded px-2.5 py-1.5 outline-none focus:border-[#534AB7]"
+                            />
+                            <input
+                              value={u.pages}
+                              onChange={e => updateParsedUnit(i, "pages", e.target.value)}
+                              placeholder="Pages"
+                              className="w-24 text-xs border border-border rounded px-2.5 py-1.5 outline-none focus:border-[#534AB7]"
+                            />
+                            <button onClick={() => removeParsedUnit(i)} className="text-muted-foreground hover:text-red-500 p-1">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <button onClick={addParsedUnit} className="flex items-center gap-1 text-xs text-[#534AB7] hover:underline">
+                        <Plus className="w-3 h-3" /> Add unit
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ── MANUAL TAB ── */}
           {tab === "manual" && (
             <div className="space-y-3">
               <div className="text-xs text-muted-foreground">Enter as many units/chapters as you like at once.</div>
