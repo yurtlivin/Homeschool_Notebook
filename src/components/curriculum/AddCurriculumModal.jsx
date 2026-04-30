@@ -135,6 +135,15 @@ Return ONLY a JSON object with a "units" array where each item is a separate cha
   const removeParsedUnit = (i) => setParsedUnits(prev => prev.filter((_, idx) => idx !== i));
   const addParsedUnit = () => setParsedUnits(prev => [...prev, { id: `u-${Date.now()}`, name: "", pages: "" }]);
 
+  const splitByLines = () => {
+    const lines = pastedText.trim().split('\n').filter(line => line.trim().length > 0);
+    setParsedUnits(lines.map((line, i) => ({ 
+      id: `u-paste-${Date.now()}-${i}`, 
+      name: line.trim(), 
+      pages: "" 
+    })));
+  };
+
   const updateRow = (i, field, val) => setRows(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: val } : r));
   const removeRow = (i) => setRows(prev => prev.filter((_, idx) => idx !== i));
   const addRow = () => setRows(prev => [...prev, EMPTY_ROW()]);
@@ -276,12 +285,20 @@ Return ONLY a JSON object with a "units" array where each item is a separate cha
                     className="w-full text-sm border border-border rounded px-3 py-2 resize-none outline-none focus:border-[#534AB7]"
                   />
                   {!parsingText && parsedUnits.length === 0 && (pastedText.trim().length > 0) && (
-                    <button
-                      onClick={runParseText}
-                      className="w-full flex items-center justify-center gap-2 text-sm bg-[#534AB7] text-white py-2.5 rounded-lg hover:bg-[#4340a0]"
-                    >
-                      <Sparkles className="w-4 h-4" /> Process Text
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={splitByLines}
+                        className="flex-1 text-sm border border-[#534AB7] text-[#534AB7] py-2.5 rounded-lg hover:bg-[#EEEDFE]"
+                      >
+                        Split by Lines
+                      </button>
+                      <button
+                        onClick={runParseText}
+                        className="flex-1 flex items-center justify-center gap-2 text-sm bg-[#534AB7] text-white py-2.5 rounded-lg hover:bg-[#4340a0]"
+                      >
+                        <Sparkles className="w-4 h-4" /> AI Parse
+                      </button>
+                    </div>
                   )}
 
                   {parsingText && (
