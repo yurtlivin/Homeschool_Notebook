@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, subWeeks } from "date-fns";
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, subWeeks, startOfMonth, endOfMonth, addMonths, subMonths, getDay } from "date-fns";
 import { ChevronLeft, ChevronRight, Trash2, X } from "lucide-react";
 
 export default function BulkScheduler({ book, units, onRefresh }) {
+  const [view, setView] = useState("week"); // "week" | "month"
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [monthStart, setMonthStart] = useState(startOfMonth(new Date()));
   const [dayData, setDayData] = useState({}); // { "2026-04-30": { pages: "13-15", notes: "Watch video X", unit_id: "u-123" } }
   const [editingDay, setEditingDay] = useState(null);
+  const [expandedDay, setExpandedDay] = useState(null); // for month view detail panel
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [conflictDialog, setConflictDialog] = useState(null); // "ask" | null
@@ -46,6 +49,10 @@ export default function BulkScheduler({ book, units, onRefresh }) {
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd })
     .filter(d => d.getDay() >= 1 && d.getDay() <= 5); // Mon-Fri only
+
+  const monthEnd = endOfMonth(monthStart);
+  const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const monthStartPad = getDay(monthStart);
 
   const updateDayData = (ds, field, value) => {
     setDayData(prev => ({
@@ -161,20 +168,38 @@ export default function BulkScheduler({ book, units, onRefresh }) {
 
   return (
     <div className="space-y-4">
-      <div className="text-xs text-muted-foreground">Assign pages and notes across the week—select a unit per day to link the lesson.</div>
-
-      {/* Week navigation */}
-      <div className="flex items-center justify-between px-2">
-        <button onClick={() => setWeekStart(d => subWeeks(d, 1))} className="p-1 hover:bg-muted rounded">
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        <span className="text-xs font-medium">{format(weekStart, "MMM d")} – {format(weekEnd, "MMM d")}</span>
-        <button onClick={() => setWeekStart(d => addWeeks(d, 1))} className="p-1 hover:bg-muted rounded">
-          <ChevronRight className="w-4 h-4" />
-        </button>
+      {/* View tabs */}
+      <div className="flex border-b border-border">
+        {["week", "month"].map(v => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            className={`text-xs px-4 py-2.5 border-b-2 transition-colors -mb-px capitalize ${
+              view === v ? "border-[#534AB7] text-[#534AB7] font-medium" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {v}ly view
+          </button>
+        ))}
       </div>
 
-      {/* Horizontal calendar grid */}
+      <div className="text-xs text-muted-foreground">Assign pages and notes—select a unit per day to link the lesson.</div>
+
+      {/* Week view */}
+      {view === "week" && (
+        <>
+          {/* Week navigation */}
+          <div className="flex items-center justify-between px-2">
+            <button onClick={() => setWeekStart(d => subWeeks(d, 1))} className="p-1 hover:bg-muted rounded">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-medium">{format(weekStart, "MMM d")} – {format(weekEnd, "MMM d")}</span>
+            <button onClick={() => setWeekStart(d => addWeeks(d, 1))} className="p-1 hover:bg-muted rounded">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Horizontal calendar grid */}
       <div className="grid grid-cols-5 gap-2">
         {weekDays.map(day => {
            const ds = format(day, "yyyy-MM-dd");
@@ -257,9 +282,137 @@ export default function BulkScheduler({ book, units, onRefresh }) {
                  />
                </div>
              </div>
-           );
-         })}
-      </div>
+             );
+             })}
+             </div>
+             </>
+             )}
+
+             {/* Month view */}
+             {view === "month" && (
+             <>
+             {/* Month navigation */}
+             <div className="flex items-center justify-between px-2">
+             <button onClick={() => setMonthStart(d => subMonths(d, 1))} className="p-1 hover:bg-muted rounded">
+              <ChevronLeft className="w-4 h-4" />
+             </button>
+             <span className="text-xs font-medium">{format(monthStart, "MMMM yyyy")}</span>
+             <button onClick={() => setMonthStart(d => addMonths(d, 1))} className="p-1 hover:bg-muted rounded">
+              <ChevronRight className="w-4 h-4" />
+             </button>
+             </div>
+
+             {/* Month grid */}
+             <div className="border border-border rounded-lg overflow-hidden">
+             {/* Day headers */}
+             <div className="grid grid-cols-7 bg-muted/30">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(d => (
+                <div key={d} className="text-[10px] font-semibold text-center py-1.5 border-b border-border">{d}</div>
+              ))}
+             </div>
+
+             {/* Calendar days */}
+             <div className="grid grid-cols-7 divide-x divide-y divide-border">
+              {Array.from({ length: monthStartPad }).map((_, i) => (
+                <div key={`pad-${i}`} className="h-24 bg-muted/10" />
+              ))}
+              {monthDays.map(day => {
+                const ds = format(day, "yyyy-MM-dd");
+                const data = dayData[ds] || { pages: "", notes: "", unit_id: "" };
+                const dayUnitColor = getUnitColor(data.unit_id);
+                const isExpanded = expandedDay === ds;
+
+                return (
+                  <div key={ds} className="h-24 p-1.5 hover:bg-muted/20 cursor-pointer transition-colors border-r border-b border-border last:border-r-0" onClick={() => setExpandedDay(isExpanded ? null : ds)}>
+                    <div className="text-[10px] font-medium text-foreground mb-1">{format(day, "d")}</div>
+                    {data.pages && (
+                      <>
+                        <div className="text-[9px] font-semibold truncate" style={{ color: dayUnitColor }}>Pages: {data.pages}</div>
+                        {data.unit_id && (
+                          <div className="text-[8px] text-muted-foreground truncate">{units.find(u => u.id === data.unit_id)?.name}</div>
+                        )}
+                        {data.notes && (
+                          <div className="text-[8px] text-muted-foreground truncate mt-0.5">{data.notes.slice(0, 30)}</div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+             </div>
+             </div>
+
+             {/* Month detail panel */}
+             {expandedDay && (
+             <div className="border border-border rounded-lg p-3 space-y-2 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">{format(new Date(expandedDay + "T12:00:00"), "EEEE, MMMM d")}</span>
+                <button onClick={() => setExpandedDay(null)} className="text-muted-foreground hover:text-foreground"><X className="w-3.5 h-3.5" /></button>
+              </div>
+
+              {(() => {
+                const data = dayData[expandedDay] || { pages: "", notes: "", unit_id: "" };
+                const dayUnitColor = getUnitColor(data.unit_id);
+
+                return (
+                  <div className="space-y-2">
+                    {/* Unit dropdown */}
+                    {units.length > 0 && (
+                      <div>
+                        <label className="text-xs text-muted-foreground block mb-1">Unit</label>
+                        <select
+                          value={data.unit_id || ""}
+                          onChange={e => updateDayData(expandedDay, "unit_id", e.target.value)}
+                          className="w-full text-xs border rounded px-2.5 py-1.5 outline-none focus:border-2"
+                          style={{ borderColor: data.unit_id ? dayUnitColor : "inherit" }}
+                        >
+                          <option value="">No unit</option>
+                          {units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Pages */}
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Pages</label>
+                      <input
+                        value={data.pages}
+                        onChange={e => updateDayData(expandedDay, "pages", e.target.value)}
+                        placeholder="e.g. 1-3"
+                        className="w-full text-xs border rounded px-2.5 py-1.5 outline-none focus:border-2"
+                        style={{ borderColor: data.pages ? dayUnitColor : "inherit" }}
+                      />
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Notes</label>
+                      <textarea
+                        value={data.notes}
+                        onChange={e => updateDayData(expandedDay, "notes", e.target.value)}
+                        placeholder="Video, resource, note..."
+                        rows={2}
+                        className="w-full text-xs border rounded px-2.5 py-1.5 resize-none outline-none focus:border-2"
+                        style={{ borderColor: data.notes ? dayUnitColor : "inherit" }}
+                      />
+                    </div>
+
+                    {/* Remove button */}
+                    {data.pages && (
+                      <button
+                        onClick={() => removeDay(expandedDay)}
+                        className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" /> Remove this day
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
+             </div>
+             )}
+             </>
+             )}
 
       {/* Create button */}
       {newCount > 0 && (
