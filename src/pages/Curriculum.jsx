@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Plus } from "lucide-react";
 import CurriculumCard from "@/components/curriculum/CurriculumCard";
 import CurriculumOverview from "@/components/curriculum/CurriculumOverview";
-import AddCurriculumModal from "@/components/curriculum/AddCurriculumModal";
+import AddCurriculumModal from "@/components/curriculum/AddCurriculumModal.jsx";
 
 export default function Curriculum() {
   const [books, setBooks] = useState([]);

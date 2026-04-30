@@ -45,6 +45,40 @@
           },
           "notes": {
             "type": "string"
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "link": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "checkable": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "completed": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            }
           }
         }
       }
