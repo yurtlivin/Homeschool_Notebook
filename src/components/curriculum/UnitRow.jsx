@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { format } from "date-fns";
 import { Pencil, Trash2, Check, X } from "lucide-react";
 import UnitResources from "./UnitResources";
 
@@ -71,7 +72,7 @@ export default function UnitRow({ unit, isNext, onToggle, onUpdate, onRemove, on
             onClick={onEditDate}
             className="text-[10px] text-muted-foreground hover:text-[#534AB7] transition-colors shrink-0 hover:underline"
           >
-            {unit.completion_date}
+            {format(new Date(unit.completion_date + "T00:00:00"), "M/d/yyyy")}
           </button>
         )}
         {hovered && (

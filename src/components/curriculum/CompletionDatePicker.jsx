@@ -3,7 +3,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths,
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
 export default function CompletionDatePicker({ initialDate, onSelect, onClose }) {
-  const [viewDate, setViewDate] = useState(new Date(initialDate));
+  const [viewDate, setViewDate] = useState(new Date(initialDate + "T00:00:00"));
 
   const start = startOfMonth(viewDate);
   const end = endOfMonth(viewDate);
@@ -47,10 +47,11 @@ export default function CompletionDatePicker({ initialDate, onSelect, onClose })
           <div key={`pad-${i}`} className="w-5 h-5" />
         ))}
         {days.map(day => {
-          const isSelected = format(day, "yyyy-MM-dd") === initialDate;
+          const dayFormatted = format(day, "yyyy-MM-dd");
+          const isSelected = dayFormatted === initialDate;
           return (
             <button
-              key={format(day, "yyyy-MM-dd")}
+              key={dayFormatted}
               onClick={() => handleSelectDate(day)}
               className={`w-5 h-5 text-[10px] rounded transition-colors ${
                 isSelected
