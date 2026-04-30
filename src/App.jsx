@@ -9,6 +9,7 @@ import { UserProvider } from '@/lib/userContext';
 import AppLayout from '@/components/layout/AppLayout';
 import Home from '@/pages/Home';
 import Curriculum from '@/pages/Curriculum';
+import CurriculumPlanner from '@/pages/CurriculumPlanner';
 import Planner from '@/pages/Planner';
 import Books from '@/pages/Books';
 import Portfolio from '@/pages/Portfolio';
@@ -40,7 +41,7 @@ const AuthenticatedApp = () => {
       <Routes>
         <Route element={<AppLayout />}>
           <Route path="/" element={<Home />} />
-          <Route path="/curriculum" element={<Curriculum />} />
+          <Route path="/curriculum" element={<CurriculumPlanner />} />
           <Route path="/planner" element={<Planner />} />
           <Route path="/books" element={<Books />} />
           <Route path="/portfolio" element={<Portfolio />} />

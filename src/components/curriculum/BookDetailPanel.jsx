@@ -1,0 +1,327 @@
+import { useState, useRef } from "react";
+import { base44 } from "@/api/base44Client";
+import { SUBJECT_COLORS } from "@/lib/constants";
+import { Camera, Plus, X, Trash2, Check, Pencil, Image, Calendar, BookOpen, StickyNote, MapPin } from "lucide-react";
+import UnitRow from "./UnitRow";
+import BookMiniCalendar from "./BookMiniCalendar";
+import BookPhotoGallery from "./BookPhotoGallery";
+
+const TABS = ["Units", "Photos", "Field Trips", "Notes", "Plan"];
+
+export default function BookDetailPanel({ book, onRefresh, onClose }) {
+  const [tab, setTab] = useState("Units");
+  const [addingUnit, setAddingUnit] = useState(false);
+  const [newUnitName, setNewUnitName] = useState("");
+  const [newUnitPages, setNewUnitPages] = useState("");
+  const [bookNotes, setBookNotes] = useState(book.notes || "");
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [addingTrip, setAddingTrip] = useState(false);
+  const [newTrip, setNewTrip] = useState({ title: "", date: "", unit_id: "", note: "" });
+  const [confirmArchive, setConfirmArchive] = useState(false);
+  const coverRef = useRef();
+
+  const units = book.units || [];
+  const fieldTrips = book.field_trips || [];
+  const photos = book.photos || [];
+  const completed = units.filter(u => u.completed).length;
+  const subjectColor = SUBJECT_COLORS[book.subject] || "#534AB7";
+  const nextUnit = units.find(u => !u.completed);
+
+  const saveUnits = async (updated) => {
+    await base44.entities.CurriculumBook.update(book.id, { units: updated });
+    onRefresh();
+  };
+
+  const addUnit = async () => {
+    if (!newUnitName.trim()) return;
+    const newUnit = { id: `u-${Date.now()}`, name: newUnitName.trim(), pages: newUnitPages.trim(), completed: false, resources: [] };
+    await saveUnits([...units, newUnit]);
+    setNewUnitName(""); setNewUnitPages(""); setAddingUnit(false);
+  };
+
+  const toggleUnit = async (unitId, val) => {
+    await saveUnits(units.map(u => u.id === unitId ? { ...u, completed: val, completion_date: val ? new Date().toISOString().split("T")[0] : null } : u));
+  };
+
+  const updateUnit = async (unitId, changes) => {
+    await saveUnits(units.map(u => u.id === unitId ? { ...u, ...changes } : u));
+  };
+
+  const removeUnit = async (unitId) => {
+    await saveUnits(units.filter(u => u.id !== unitId));
+  };
+
+  const saveNotes = async () => {
+    setSavingNotes(true);
+    await base44.entities.CurriculumBook.update(book.id, { notes: bookNotes });
+    setSavingNotes(false);
+    onRefresh();
+  };
+
+  const addTrip = async () => {
+    if (!newTrip.title.trim()) return;
+    const updated = [...fieldTrips, { ...newTrip, id: `ft-${Date.now()}` }];
+    await base44.entities.CurriculumBook.update(book.id, { field_trips: updated });
+    setNewTrip({ title: "", date: "", unit_id: "", note: "" });
+    setAddingTrip(false);
+    onRefresh();
+  };
+
+  const removeTrip = async (id) => {
+    await base44.entities.CurriculumBook.update(book.id, { field_trips: fieldTrips.filter(f => f.id !== id) });
+    onRefresh();
+  };
+
+  const handleCoverUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    await base44.entities.CurriculumBook.update(book.id, { cover_image: file_url });
+    onRefresh();
+  };
+
+  const archiveBook = async () => {
+    await base44.entities.CurriculumBook.update(book.id, { is_archived: true });
+    onRefresh();
+    onClose();
+  };
+
+  const pct = units.length > 0 ? Math.round((completed / units.length) * 100) : 0;
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header */}
+      <div className="border-b border-border px-6 py-4 shrink-0">
+        <div className="flex items-start gap-4">
+          {/* Cover */}
+          <div
+            className="w-14 h-18 rounded border border-border bg-muted/40 flex items-center justify-center cursor-pointer overflow-hidden shrink-0 hover:opacity-80 transition-opacity"
+            style={{ height: 72 }}
+            onClick={() => coverRef.current?.click()}
+          >
+            {book.cover_image ? (
+              <img src={book.cover_image} alt="cover" className="w-full h-full object-cover" />
+            ) : (
+              <Camera className="w-4 h-4 text-muted-foreground" />
+            )}
+          </div>
+          <input ref={coverRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: subjectColor }}>
+                {book.subject}
+              </span>
+              <span className="text-xs text-muted-foreground">{book.kid}</span>
+              {book.grade_level && <span className="text-xs text-muted-foreground">· {book.grade_level}</span>}
+            </div>
+            <h2 className="text-base font-semibold text-foreground">{book.name}</h2>
+            <div className="flex items-center gap-3 mt-2">
+              <div className="flex-1 max-w-xs">
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                  <span>{completed}/{units.length} units</span>
+                  <span>{pct}%</span>
+                </div>
+                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full rounded-full" style={{ backgroundColor: subjectColor, width: `${pct}%` }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => setConfirmArchive(true)} className="text-xs text-muted-foreground hover:text-red-400 px-2 py-1 rounded border border-border hover:border-red-200 transition-colors">
+              Archive
+            </button>
+            <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Up next */}
+        {nextUnit && (
+          <div className="mt-3 border-l-4 border-[#534AB7] bg-[#EEEDFE] px-3 py-2 rounded-r-md">
+            <div className="text-xs text-[#534AB7] font-medium mb-0.5">Up next</div>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-foreground font-medium">{nextUnit.name}</div>
+                {nextUnit.pages && <div className="text-xs text-muted-foreground">{nextUnit.pages}</div>}
+              </div>
+              <button
+                onClick={() => toggleUnit(nextUnit.id, true)}
+                className="flex items-center gap-1 text-xs text-[#534AB7] hover:underline"
+              >
+                <Check className="w-3 h-3" /> Mark done
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-border px-6 shrink-0">
+        {TABS.map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`text-xs px-3 py-2.5 border-b-2 transition-colors -mb-px ${tab === t ? "border-[#534AB7] text-[#534AB7] font-medium" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      <div className="flex-1 overflow-y-auto px-6 py-4">
+
+        {/* Units */}
+        {tab === "Units" && (
+          <div>
+            <div className="space-y-0.5 mb-3">
+              {units.map(unit => (
+                <UnitRow
+                  key={unit.id}
+                  unit={unit}
+                  isNext={unit.id === nextUnit?.id}
+                  onToggle={(val) => toggleUnit(unit.id, val)}
+                  onUpdate={(changes) => updateUnit(unit.id, changes)}
+                  onRemove={() => removeUnit(unit.id)}
+                />
+              ))}
+              {units.length === 0 && <p className="text-xs text-muted-foreground py-4">No units yet.</p>}
+            </div>
+            {addingUnit ? (
+              <div className="flex gap-2 mt-2">
+                <input
+                  value={newUnitName}
+                  onChange={e => setNewUnitName(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") addUnit(); }}
+                  placeholder="Unit name"
+                  autoFocus
+                  className="flex-1 text-xs border border-border rounded px-2.5 py-1.5 outline-none focus:border-[#534AB7]"
+                />
+                <input
+                  value={newUnitPages}
+                  onChange={e => setNewUnitPages(e.target.value)}
+                  placeholder="Pages"
+                  className="w-24 text-xs border border-border rounded px-2.5 py-1.5 outline-none focus:border-[#534AB7]"
+                />
+                <button onClick={addUnit} className="text-xs bg-[#534AB7] text-white px-3 py-1.5 rounded">Add</button>
+                <button onClick={() => { setAddingUnit(false); setNewUnitName(""); setNewUnitPages(""); }} className="text-xs border border-border px-2 py-1.5 rounded">✕</button>
+              </div>
+            ) : (
+              <button onClick={() => setAddingUnit(true)} className="flex items-center gap-1 text-xs text-[#534AB7] hover:underline mt-2">
+                <Plus className="w-3 h-3" /> Add unit
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Photos */}
+        {tab === "Photos" && (
+          <BookPhotoGallery book={book} units={units} onRefresh={onRefresh} />
+        )}
+
+        {/* Field Trips */}
+        {tab === "Field Trips" && (
+          <div>
+            <div className="space-y-2 mb-4">
+              {fieldTrips.length === 0 && !addingTrip && <p className="text-xs text-muted-foreground">No field trips yet.</p>}
+              {fieldTrips.map(ft => (
+                <div key={ft.id} className="bg-white border border-border rounded-md px-3 py-2.5 flex items-start gap-3 group">
+                  <MapPin className="w-3.5 h-3.5 text-[#534AB7] mt-0.5 shrink-0" />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-foreground">{ft.title}</div>
+                    {ft.date && <div className="text-xs text-muted-foreground">{ft.date}</div>}
+                    {ft.unit_id && <div className="text-xs text-muted-foreground">Unit: {units.find(u => u.id === ft.unit_id)?.name}</div>}
+                    {ft.note && <div className="text-xs text-muted-foreground mt-1">{ft.note}</div>}
+                  </div>
+                  <button onClick={() => removeTrip(ft.id)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500">
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            {addingTrip ? (
+              <div className="space-y-2 bg-muted/20 rounded-md p-3">
+                <input value={newTrip.title} onChange={e => setNewTrip(p => ({ ...p, title: e.target.value }))} placeholder="Trip title" className="w-full text-xs border border-border rounded px-2.5 py-1.5 outline-none focus:border-[#534AB7]" />
+                <div className="flex gap-2">
+                  <input type="date" value={newTrip.date} onChange={e => setNewTrip(p => ({ ...p, date: e.target.value }))} className="flex-1 text-xs border border-border rounded px-2.5 py-1.5 outline-none focus:border-[#534AB7]" />
+                  <select value={newTrip.unit_id} onChange={e => setNewTrip(p => ({ ...p, unit_id: e.target.value }))} className="flex-1 text-xs border border-border rounded px-2.5 py-1.5 outline-none focus:border-[#534AB7]">
+                    <option value="">Link to unit...</option>
+                    {units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                  </select>
+                </div>
+                <textarea value={newTrip.note} onChange={e => setNewTrip(p => ({ ...p, note: e.target.value }))} placeholder="Notes (optional)" rows={2} className="w-full text-xs border border-border rounded px-2.5 py-1.5 resize-none outline-none focus:border-[#534AB7]" />
+                <div className="flex gap-2">
+                  <button onClick={addTrip} className="text-xs bg-[#534AB7] text-white px-3 py-1.5 rounded">Add trip</button>
+                  <button onClick={() => setAddingTrip(false)} className="text-xs border border-border rounded px-3 py-1.5">Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => setAddingTrip(true)} className="flex items-center gap-1 text-xs text-[#534AB7] hover:underline">
+                <Plus className="w-3 h-3" /> Add field trip
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Notes */}
+        {tab === "Notes" && (
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Curriculum notes</label>
+              <textarea
+                value={bookNotes}
+                onChange={e => setBookNotes(e.target.value)}
+                placeholder="General notes about this curriculum..."
+                rows={4}
+                className="w-full text-sm border border-border rounded px-3 py-2 resize-none outline-none focus:border-[#534AB7]"
+              />
+              <button onClick={saveNotes} disabled={savingNotes} className="text-xs bg-[#534AB7] text-white px-3 py-1.5 rounded mt-1 disabled:opacity-50">
+                {savingNotes ? "Saving..." : "Save notes"}
+              </button>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground mb-2">Per-unit notes</div>
+              <div className="space-y-2">
+                {units.map(u => (
+                  <div key={u.id} className="flex items-start gap-2">
+                    <span className="text-xs text-foreground w-32 truncate pt-1.5 shrink-0">{u.name}</span>
+                    <textarea
+                      defaultValue={u.notes || ""}
+                      onBlur={e => updateUnit(u.id, { notes: e.target.value })}
+                      placeholder="Note..."
+                      rows={1}
+                      className="flex-1 text-xs border border-border rounded px-2.5 py-1.5 resize-none outline-none focus:border-[#534AB7]"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Plan */}
+        {tab === "Plan" && (
+          <BookMiniCalendar book={book} units={units} onRefresh={onRefresh} />
+        )}
+      </div>
+
+      {/* Archive confirm */}
+      {confirmArchive && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setConfirmArchive(false)}>
+          <div className="bg-white border border-border rounded-xl w-80 shadow-xl p-5" onClick={e => e.stopPropagation()}>
+            <div className="text-sm font-semibold mb-2">Archive this curriculum?</div>
+            <p className="text-xs text-muted-foreground mb-4">It will be hidden from your main view but its data is preserved.</p>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setConfirmArchive(false)} className="text-xs border border-border rounded px-3 py-1.5">Cancel</button>
+              <button onClick={archiveBook} className="text-xs bg-red-500 text-white rounded px-3 py-1.5">Archive</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

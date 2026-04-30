@@ -8,8 +8,10 @@ import HandoffBanner from "@/components/home/HandoffBanner";
 import AnchorChecklist from "@/components/home/AnchorChecklist";
 import SharedAnchors from "@/components/home/SharedAnchors";
 import QuickAddMoment from "@/components/home/QuickAddMoment";
+import QuickAddLesson from "@/components/home/QuickAddLesson";
 import LogEntryCard from "@/components/home/LogEntryCard";
 import MiniCalendar from "@/components/home/MiniCalendar";
+import DailyKidList from "@/components/home/DailyKidList";
 import { Plus, Filter } from "lucide-react";
 
 export default function Home() {
@@ -19,6 +21,7 @@ export default function Home() {
   const [logEntries, setLogEntries] = useState([]);
   const [anchorChecks, setAnchorChecks] = useState([]);
   const [allLogEntries, setAllLogEntries] = useState([]);
+  const [plannerItems, setPlannerItems] = useState([]);
   const [filter, setFilter] = useState("All");
   const [schoolDays, setSchoolDays] = useState(0);
   const [milestones, setMilestones] = useState(0);
@@ -35,14 +38,16 @@ export default function Home() {
 
   const loadData = async () => {
     setLoading(true);
-    const [entries, checks, allEntries] = await Promise.all([
+    const [entries, checks, allEntries, plannedItems] = await Promise.all([
       base44.entities.LogEntry.filter({ date: selectedDate }),
       base44.entities.AnchorCheck.filter({ date: selectedDate }),
       base44.entities.LogEntry.list("-date", 500),
+      base44.entities.PlannerItem.filter({ date: selectedDate }),
     ]);
     setLogEntries(entries);
     setAnchorChecks(checks);
     setAllLogEntries(allEntries);
+    setPlannerItems(plannedItems);
 
     // school days = dates with at least one check + one entry
     const checkedDates = new Set((await base44.entities.AnchorCheck.filter({ completed: true })).map(c => c.date));
@@ -132,6 +137,24 @@ export default function Home() {
           existingChecks={anchorChecks}
           onCheckChange={loadData}
         />
+
+        {/* Daily assignment lists */}
+        <div className="grid grid-cols-2 gap-3">
+          <DailyKidList
+            kid="Tigerlily"
+            items={plannerItems.filter(i => i.kid === "Tigerlily" || i.kid === "Both")}
+            date={selectedDate}
+            onRefresh={loadData}
+          />
+          <DailyKidList
+            kid="Rowen"
+            items={plannerItems.filter(i => i.kid === "Rowen" || i.kid === "Both")}
+            date={selectedDate}
+            onRefresh={loadData}
+          />
+        </div>
+
+        <QuickAddLesson date={selectedDate} onAdded={loadData} />
 
         <QuickAddMoment date={selectedDate} onAdded={loadData} />
 

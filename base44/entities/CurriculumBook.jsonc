@@ -87,6 +87,29 @@
         }
       }
     },
+    "photos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "unit_id": {
+            "type": "string"
+          },
+          "caption": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "notes": {
       "type": "string"
     },
@@ -95,6 +118,9 @@
       "items": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string"
+          },
           "unit_id": {
             "type": "string"
           },

@@ -7,7 +7,7 @@ import UserSwitcher from "./UserSwitcher";
 const NAV = [
 { label: "Home", icon: Home, path: "/" },
 { label: "Planner", icon: CalendarDays, path: "/planner" },
-{ label: "Curriculum", icon: BookOpen, path: "/curriculum" },
+{ label: "Curriculum Planner", icon: BookOpen, path: "/curriculum" },
 { label: "Portfolio", icon: FolderOpen, path: "/portfolio" },
 { label: "Books", icon: BookMarked, path: "/books" }];
 
