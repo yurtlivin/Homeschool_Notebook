@@ -101,9 +101,16 @@ Return ONLY a JSON object. Do not include markdown.`,
     setParsedUnits([]);
     const result = await base44.integrations.Core.InvokeLLM({
       prompt: `You are analyzing a text paste of a curriculum book's table of contents or unit list.
-Extract all chapters, lessons, or units you can find.
-For each unit extract: name (the chapter/lesson title) and pages (page range as a string like "pp. 12–24", leave blank if not visible).
-Return ONLY a JSON object with a "units" array.`,
+The text may contain chapters, lessons, or units separated by line breaks, numbers, bullets, or other markers.
+IMPORTANT: Split each line or logical unit into its own entry. Do NOT combine multiple lines into one unit.
+For each unit extract: name (the chapter/lesson title, cleaned up) and pages (page range as a string like "pp. 12–24" or "12-24", leave blank if not visible).
+Look for patterns like:
+- "Chapter 1: Title pp.1-10"
+- "1. Unit Name p.5"
+- "- Lesson Name"
+- Numbered or bulleted lists with optional page ranges
+
+Return ONLY a JSON object with a "units" array where each item is a separate chapter/lesson/unit.`,
       response_json_schema: {
         type: "object",
         properties: {
