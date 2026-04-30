@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { SUBJECT_COLORS } from "@/lib/constants";
-import { Check, ChevronDown, ChevronUp, Plus, Camera } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Plus, Camera, Trash2 } from "lucide-react";
 import UnitRow from "./UnitRow";
 
 const TABS = ["Units", "Notes", "Field trips"];
@@ -17,6 +17,7 @@ export default function CurriculumCard({ book, logEntries, onRefresh }) {
   const [savingNotes, setSavingNotes] = useState(false);
   const [newTrip, setNewTrip] = useState({ title: "", date: "", unit_id: "" });
   const [addingTrip, setAddingTrip] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
   const fileRef = useRef();
 
   const units = book.units || [];
@@ -80,6 +81,11 @@ export default function CurriculumCard({ book, logEntries, onRefresh }) {
     onRefresh();
   };
 
+  const archiveBook = async () => {
+    await base44.entities.CurriculumBook.update(book.id, { is_archived: true });
+    onRefresh();
+  };
+
   const handleCoverUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -125,9 +131,28 @@ export default function CurriculumCard({ book, logEntries, onRefresh }) {
               </div>
               <h3 className="text-sm font-semibold text-foreground">{book.name}</h3>
             </div>
-            <button onClick={() => setOpen(o => !o)} className="p-1 text-muted-foreground hover:text-foreground shrink-0">
-              {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
+            <div className="flex items-center gap-0.5 shrink-0">
+              <button onClick={() => setConfirmArchive(true)} className="p-1 text-muted-foreground hover:text-red-400" title="Archive curriculum">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={() => setOpen(o => !o)} className="p-1 text-muted-foreground hover:text-foreground">
+                {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+            </div>
+
+            {/* Archive confirm dialog */}
+            {confirmArchive && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setConfirmArchive(false)}>
+                <div className="bg-white border border-border rounded-xl w-80 shadow-xl p-5" onClick={e => e.stopPropagation()}>
+                  <div className="text-sm font-semibold text-foreground mb-2">Archive this curriculum?</div>
+                  <p className="text-xs text-muted-foreground mb-4">It will be hidden from your main view but its data is preserved and won't be lost.</p>
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => setConfirmArchive(false)} className="text-xs border border-border rounded px-3 py-1.5 hover:bg-muted">Cancel</button>
+                    <button onClick={archiveBook} className="text-xs bg-red-500 text-white rounded px-3 py-1.5 hover:bg-red-600">Archive</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Progress */}

@@ -27,6 +27,7 @@ export default function AddCurriculumModal({ onClose, onAdded }) {
   const [scanPreview, setScanPreview] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [scannedUnits, setScannedUnits] = useState([]);
+  const [scanFileUrl, setScanFileUrl] = useState(null);
   const fileRef = useRef();
 
   // Manual state
@@ -45,7 +46,8 @@ export default function AddCurriculumModal({ onClose, onAdded }) {
   const runScan = async () => {
     if (!scanImage) return;
     setScanning(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file: scanImage });
+    const { file_url: uploadedFileUrl } = await base44.integrations.Core.UploadFile({ file: scanImage });
+    setScanFileUrl(uploadedFileUrl);
     const result = await base44.integrations.Core.InvokeLLM({
       prompt: `You are analyzing an image of a homeschool curriculum book (could be cover, table of contents, or index page).
 Extract the following information:
@@ -54,7 +56,7 @@ Extract the following information:
 - grade_level: e.g. "Grade 4" or "Level 2" (leave blank if unclear)
 - units: an array of chapters/lessons/units found. For each unit extract: name (title of the chapter/lesson) and pages (page range as a string, e.g. "pp. 12–24"). If no page info visible, leave pages blank.
 Return ONLY a JSON object. Do not include markdown.`,
-      file_urls: [file_url],
+      file_urls: [uploadedFileUrl],
       add_context_from_internet: true,
       response_json_schema: {
         type: "object",
@@ -107,7 +109,7 @@ Return ONLY a JSON object. Do not include markdown.`,
         resources: [],
       }));
     }
-    await base44.entities.CurriculumBook.create({ name: name.trim(), kid, subject, grade_level: grade.trim(), units });
+    await base44.entities.CurriculumBook.create({ name: name.trim(), kid, subject, grade_level: grade.trim(), units, ...(tab === "scan" && scanFileUrl ? { cover_image: scanFileUrl } : {}) });
     setSaving(false);
     onAdded();
     onClose();
