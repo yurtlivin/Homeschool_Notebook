@@ -6,8 +6,9 @@ import UnitRow from "./UnitRow";
 import BookMiniCalendar from "./BookMiniCalendar";
 import BookPhotoGallery from "./BookPhotoGallery";
 import CompletionDatePicker from "./CompletionDatePicker";
+import BulkScheduler from "./BulkScheduler";
 
-const TABS = ["Units", "Photos", "Field Trips", "Notes", "Plan"];
+const TABS = ["Units", "Photos", "Field Trips", "Notes", "Schedule", "Plan"];
 const SUBJECTS = Object.keys(SUBJECT_COLORS);
 const KIDS = ["Tigerlily", "Rowen", "Both"];
 
@@ -514,6 +515,11 @@ Return ONLY a JSON object with a "units" array.`,
               </div>
             </div>
           </div>
+        )}
+
+        {/* Schedule */}
+        {tab === "Schedule" && (
+          <BulkScheduler book={book} units={units} onRefresh={onRefresh} />
         )}
 
         {/* Plan */}
