@@ -10,6 +10,7 @@ export default function BulkScheduler({ book, units, onRefresh }) {
   const [editingDay, setEditingDay] = useState(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [conflictDialog, setConflictDialog] = useState(null); // "ask" | null
 
   useEffect(() => {
     loadScheduledItems();
@@ -24,11 +25,22 @@ export default function BulkScheduler({ book, units, onRefresh }) {
         newDayData[item.date] = {
           pages: item.detail?.split('\n')[0] || item.title || "",
           notes: item.detail?.includes('\n') ? item.detail.split('\n').slice(1).join('\n') : "",
+          id: item.id, // track original IDs
         };
       }
     });
     setDayData(newDayData);
     setLoading(false);
+  };
+
+  const checkForConflicts = () => {
+    const newAssignments = Object.entries(dayData).filter(
+      ([_, data]) => data?.pages?.trim() && !data.id
+    );
+    const existingAssignments = Object.entries(dayData).filter(
+      ([_, data]) => data?.pages?.trim() && data.id
+    );
+    return { newCount: newAssignments.length, existingCount: existingAssignments.length, existingDates: existingAssignments.map(([d]) => d) };
   };
 
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
@@ -50,31 +62,89 @@ export default function BulkScheduler({ book, units, onRefresh }) {
     });
   };
 
-  const createAssignments = async () => {
-    const assignmentList = Object.entries(dayData).filter(([_, data]) => data?.pages?.trim());
-    if (assignmentList.length === 0) return;
+  const handleCreateClick = () => {
+    const { newCount, existingCount } = checkForConflicts();
+    if (existingCount > 0) {
+      setConflictDialog("ask");
+    } else {
+      createAssignments("new");
+    }
+  };
+
+  const createAssignments = async (action) => {
     setSaving(true);
 
-    await Promise.all(
-      assignmentList.map(([date, data]) =>
-        base44.entities.PlannerItem.create({
-          date,
-          kid: book.kid,
-          subject: book.subject,
-          title: `${book.name}: pages ${data.pages}`,
-          detail: data.notes ? `pages ${data.pages}\n${data.notes}` : `pages ${data.pages}`,
-          curriculum_book_id: book.id,
-          curriculum_unit_id: unitId || undefined,
-        })
-      )
-    );
+    if (action === "delete") {
+      // Delete existing assignments
+      const existing = Object.entries(dayData).filter(([_, data]) => data?.id);
+      await Promise.all(existing.map(([_, data]) => base44.entities.PlannerItem.delete(data.id)));
+    }
+
+    if (action === "keep") {
+      // Only create new ones
+      const newAssignments = Object.entries(dayData).filter(([_, data]) => data?.pages?.trim() && !data.id);
+      await Promise.all(
+        newAssignments.map(([date, data]) =>
+          base44.entities.PlannerItem.create({
+            date,
+            kid: book.kid,
+            subject: book.subject,
+            title: `${book.name}: pages ${data.pages}`,
+            detail: data.notes ? `pages ${data.pages}\n${data.notes}` : `pages ${data.pages}`,
+            curriculum_book_id: book.id,
+            curriculum_unit_id: unitId || undefined,
+          })
+        )
+      );
+    }
+
+    if (action === "override") {
+      // Delete existing and create all
+      const existing = Object.entries(dayData).filter(([_, data]) => data?.id);
+      await Promise.all(existing.map(([_, data]) => base44.entities.PlannerItem.delete(data.id)));
+
+      const allAssignments = Object.entries(dayData).filter(([_, data]) => data?.pages?.trim());
+      await Promise.all(
+        allAssignments.map(([date, data]) =>
+          base44.entities.PlannerItem.create({
+            date,
+            kid: book.kid,
+            subject: book.subject,
+            title: `${book.name}: pages ${data.pages}`,
+            detail: data.notes ? `pages ${data.pages}\n${data.notes}` : `pages ${data.pages}`,
+            curriculum_book_id: book.id,
+            curriculum_unit_id: unitId || undefined,
+          })
+        )
+      );
+    }
+
+    if (action === "new") {
+      const assignmentList = Object.entries(dayData).filter(([_, data]) => data?.pages?.trim() && !data.id);
+      await Promise.all(
+        assignmentList.map(([date, data]) =>
+          base44.entities.PlannerItem.create({
+            date,
+            kid: book.kid,
+            subject: book.subject,
+            title: `${book.name}: pages ${data.pages}`,
+            detail: data.notes ? `pages ${data.pages}\n${data.notes}` : `pages ${data.pages}`,
+            curriculum_book_id: book.id,
+            curriculum_unit_id: unitId || undefined,
+          })
+        )
+      );
+    }
 
     setSaving(false);
+    setConflictDialog(null);
     setDayData({});
     setUnitId("");
+    await loadScheduledItems();
     onRefresh();
   };
 
+  const { newCount, existingCount } = checkForConflicts();
   const assignmentCount = Object.values(dayData).filter(d => d?.pages?.trim()).length;
 
   if (loading) {
@@ -168,14 +238,55 @@ export default function BulkScheduler({ book, units, onRefresh }) {
       </div>
 
       {/* Create button */}
-      {assignmentCount > 0 && (
+      {newCount > 0 && (
         <button
-          onClick={createAssignments}
+          onClick={handleCreateClick}
           disabled={saving}
           className="w-full text-sm bg-[#534AB7] text-white py-2.5 rounded hover:bg-[#4340a0] disabled:opacity-50 font-medium"
         >
-          {saving ? "Creating..." : `Create ${assignmentCount} assignment${assignmentCount !== 1 ? "s" : ""}`}
+          {saving ? "Creating..." : existingCount > 0 ? `Create ${newCount} new assignment${newCount !== 1 ? "s" : ""}` : `Create ${newCount} assignment${newCount !== 1 ? "s" : ""}`}
         </button>
+      )}
+
+      {/* Conflict dialog */}
+      {conflictDialog === "ask" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setConflictDialog(null)}>
+          <div className="bg-white border border-border rounded-xl w-96 shadow-xl p-5" onClick={e => e.stopPropagation()}>
+            <div className="text-sm font-semibold mb-2">Already scheduled</div>
+            <p className="text-xs text-muted-foreground mb-4">
+              {existingCount} assignment{existingCount !== 1 ? "s" : ""} already exist for these days. What would you like to do?
+            </p>
+            <div className="space-y-2">
+              <button
+                onClick={() => createAssignments("keep")}
+                disabled={saving}
+                className="w-full text-sm border border-[#534AB7] text-[#534AB7] px-4 py-2 rounded hover:bg-[#EEEDFE] disabled:opacity-50"
+              >
+                Keep existing, add new ({newCount})
+              </button>
+              <button
+                onClick={() => createAssignments("override")}
+                disabled={saving}
+                className="w-full text-sm bg-amber-100 text-amber-700 px-4 py-2 rounded hover:bg-amber-200 disabled:opacity-50"
+              >
+                Replace all ({assignmentCount})
+              </button>
+              <button
+                onClick={() => createAssignments("delete")}
+                disabled={saving}
+                className="w-full text-sm bg-red-100 text-red-700 px-4 py-2 rounded hover:bg-red-200 disabled:opacity-50"
+              >
+                Delete existing, don't create
+              </button>
+              <button
+                onClick={() => setConflictDialog(null)}
+                className="w-full text-sm border border-border px-4 py-2 rounded hover:bg-muted"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
