@@ -1,10 +1,11 @@
 import { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { SUBJECT_COLORS } from "@/lib/constants";
-import { Camera, Plus, X, Trash2, Check, Pencil, MapPin, Sparkles, Upload, Save } from "lucide-react";
+import { Camera, Plus, X, Trash2, Check, Pencil, MapPin, Sparkles, Upload, Save, Calendar } from "lucide-react";
 import UnitRow from "./UnitRow";
 import BookMiniCalendar from "./BookMiniCalendar";
 import BookPhotoGallery from "./BookPhotoGallery";
+import CompletionDatePicker from "./CompletionDatePicker";
 
 const TABS = ["Units", "Photos", "Field Trips", "Notes", "Plan"];
 const SUBJECTS = Object.keys(SUBJECT_COLORS);
@@ -27,6 +28,7 @@ export default function BookDetailPanel({ book, onRefresh, onClose }) {
   const [editingInfo, setEditingInfo] = useState(false);
   const [editForm, setEditForm] = useState({ name: book.name, subject: book.subject, kid: book.kid, grade_level: book.grade_level || "" });
   const [savingInfo, setSavingInfo] = useState(false);
+  const [datePickerUnitId, setDatePickerUnitId] = useState(null);
   const coverRef = useRef();
   const scanRef = useRef();
 
@@ -49,7 +51,13 @@ export default function BookDetailPanel({ book, onRefresh, onClose }) {
   };
 
   const toggleUnit = async (unitId, val) => {
-    await saveUnits(units.map(u => u.id === unitId ? { ...u, completed: val, completion_date: val ? new Date().toISOString().split("T")[0] : null } : u));
+    const newDate = val ? new Date().toISOString().split("T")[0] : null;
+    await saveUnits(units.map(u => u.id === unitId ? { ...u, completed: val, completion_date: newDate } : u));
+  };
+
+  const updateCompletionDate = async (unitId, newDate) => {
+    await saveUnits(units.map(u => u.id === unitId ? { ...u, completion_date: newDate } : u));
+    setDatePickerUnitId(null);
   };
 
   const updateUnit = async (unitId, changes) => {
@@ -295,14 +303,23 @@ Return ONLY a JSON object with a "units" array.`,
           <div>
             <div className="space-y-0.5 mb-3">
               {units.map(unit => (
-                <UnitRow
-                  key={unit.id}
-                  unit={unit}
-                  isNext={unit.id === nextUnit?.id}
-                  onToggle={(val) => toggleUnit(unit.id, val)}
-                  onUpdate={(changes) => updateUnit(unit.id, changes)}
-                  onRemove={() => removeUnit(unit.id)}
-                />
+                <div key={unit.id} className="relative">
+                  <UnitRow
+                    unit={unit}
+                    isNext={unit.id === nextUnit?.id}
+                    onToggle={(val) => toggleUnit(unit.id, val)}
+                    onUpdate={(changes) => updateUnit(unit.id, changes)}
+                    onRemove={() => removeUnit(unit.id)}
+                    onEditDate={unit.completed ? () => setDatePickerUnitId(unit.id) : null}
+                  />
+                  {datePickerUnitId === unit.id && unit.completion_date && (
+                    <CompletionDatePicker
+                      initialDate={unit.completion_date}
+                      onSelect={(newDate) => updateCompletionDate(unit.id, newDate)}
+                      onClose={() => setDatePickerUnitId(null)}
+                    />
+                  )}
+                </div>
               ))}
               {units.length === 0 && <p className="text-xs text-muted-foreground py-4">No units yet.</p>}
             </div>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Pencil, Trash2, Check, X } from "lucide-react";
 import UnitResources from "./UnitResources";
 
-export default function UnitRow({ unit, isNext, onToggle, onUpdate, onRemove }) {
+export default function UnitRow({ unit, isNext, onToggle, onUpdate, onRemove, onEditDate }) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(unit.name);
   const [editPages, setEditPages] = useState(unit.pages || "");
@@ -67,7 +67,12 @@ export default function UnitRow({ unit, isNext, onToggle, onUpdate, onRemove }) 
           {unit.pages && <span className="text-[10px] text-muted-foreground ml-2">{unit.pages}</span>}
         </div>
         {unit.completion_date && (
-          <span className="text-[10px] text-muted-foreground shrink-0">{unit.completion_date}</span>
+          <button
+            onClick={onEditDate}
+            className="text-[10px] text-muted-foreground hover:text-[#534AB7] transition-colors shrink-0 hover:underline"
+          >
+            {unit.completion_date}
+          </button>
         )}
         {hovered && (
           <div className="flex items-center gap-1 shrink-0">
