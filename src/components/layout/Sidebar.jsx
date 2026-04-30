@@ -5,12 +5,12 @@ import { useState } from "react";
 import UserSwitcher from "./UserSwitcher";
 
 const NAV = [
-  { label: "Home", icon: Home, path: "/" },
-  { label: "Planner", icon: CalendarDays, path: "/planner" },
-  { label: "Curriculum", icon: BookOpen, path: "/curriculum" },
-  { label: "Portfolio", icon: FolderOpen, path: "/portfolio" },
-  { label: "Books", icon: BookMarked, path: "/books" },
-];
+{ label: "Home", icon: Home, path: "/" },
+{ label: "Planner", icon: CalendarDays, path: "/planner" },
+{ label: "Curriculum", icon: BookOpen, path: "/curriculum" },
+{ label: "Portfolio", icon: FolderOpen, path: "/portfolio" },
+{ label: "Books", icon: BookMarked, path: "/books" }];
+
 
 export default function Sidebar() {
   const location = useLocation();
@@ -40,15 +40,15 @@ export default function Sidebar() {
                 key={path}
                 to={path}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors ${
-                  active
-                    ? "text-[#534AB7] font-medium bg-[#EEEDFE] border-l-2 border-[#534AB7]"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                }`}
-              >
+                active ?
+                "text-[#534AB7] font-medium bg-[#EEEDFE] border-l-2 border-[#534AB7]" :
+                "text-muted-foreground hover:text-foreground hover:bg-muted"}`
+                }>
+                
                 <Icon className="w-4 h-4 shrink-0" />
                 {label}
-              </Link>
-            );
+              </Link>);
+
           })}
         </nav>
 
@@ -56,8 +56,8 @@ export default function Sidebar() {
         <div className="px-3 py-4 border-t border-border">
           <button
             onClick={() => setShowSwitcher(true)}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted transition-colors text-left"
-          >
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted transition-colors text-left">
+            
             <span className="text-xl leading-none">{getAvatar(activeUser)}</span>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-foreground truncate">{activeUser || "Select user"}</div>
@@ -69,6 +69,6 @@ export default function Sidebar() {
       </aside>
 
       {showSwitcher && <UserSwitcher onClose={() => setShowSwitcher(false)} />}
-    </>
-  );
+    </>);
+
 }
