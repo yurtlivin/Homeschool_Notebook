@@ -1,12 +1,14 @@
 import { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { SUBJECT_COLORS } from "@/lib/constants";
-import { Camera, Plus, X, Trash2, Check, Pencil, Image, Calendar, BookOpen, StickyNote, MapPin, Sparkles, Upload } from "lucide-react";
+import { Camera, Plus, X, Trash2, Check, Pencil, MapPin, Sparkles, Upload, Save } from "lucide-react";
 import UnitRow from "./UnitRow";
 import BookMiniCalendar from "./BookMiniCalendar";
 import BookPhotoGallery from "./BookPhotoGallery";
 
 const TABS = ["Units", "Photos", "Field Trips", "Notes", "Plan"];
+const SUBJECTS = Object.keys(SUBJECT_COLORS);
+const KIDS = ["Tigerlily", "Rowen", "Both"];
 
 export default function BookDetailPanel({ book, onRefresh, onClose }) {
   const [tab, setTab] = useState("Units");
@@ -22,12 +24,14 @@ export default function BookDetailPanel({ book, onRefresh, onClose }) {
   const [scanPreview, setScanPreview] = useState(null);
   const [scannedUnits, setScannedUnits] = useState([]);
   const [showScanModal, setShowScanModal] = useState(false);
+  const [editingInfo, setEditingInfo] = useState(false);
+  const [editForm, setEditForm] = useState({ name: book.name, subject: book.subject, kid: book.kid, grade_level: book.grade_level || "" });
+  const [savingInfo, setSavingInfo] = useState(false);
   const coverRef = useRef();
   const scanRef = useRef();
 
   const units = book.units || [];
   const fieldTrips = book.field_trips || [];
-  const photos = book.photos || [];
   const completed = units.filter(u => u.completed).length;
   const subjectColor = SUBJECT_COLORS[book.subject] || "#534AB7";
   const nextUnit = units.find(u => !u.completed);
@@ -60,6 +64,19 @@ export default function BookDetailPanel({ book, onRefresh, onClose }) {
     setSavingNotes(true);
     await base44.entities.CurriculumBook.update(book.id, { notes: bookNotes });
     setSavingNotes(false);
+    onRefresh();
+  };
+
+  const saveInfo = async () => {
+    setSavingInfo(true);
+    await base44.entities.CurriculumBook.update(book.id, {
+      name: editForm.name.trim(),
+      subject: editForm.subject,
+      kid: editForm.kid,
+      grade_level: editForm.grade_level.trim(),
+    });
+    setSavingInfo(false);
+    setEditingInfo(false);
     onRefresh();
   };
 
@@ -147,8 +164,8 @@ Return ONLY a JSON object with a "units" array.`,
         <div className="flex items-start gap-4">
           {/* Cover */}
           <div
-            className="w-14 h-18 rounded border border-border bg-muted/40 flex items-center justify-center cursor-pointer overflow-hidden shrink-0 hover:opacity-80 transition-opacity"
-            style={{ height: 72 }}
+            className="w-12 rounded border border-border bg-muted/40 flex items-center justify-center cursor-pointer overflow-hidden shrink-0 hover:opacity-80 transition-opacity"
+            style={{ height: 96 }}
             onClick={() => coverRef.current?.click()}
           >
             {book.cover_image ? (
@@ -160,25 +177,71 @@ Return ONLY a JSON object with a "units" array.`,
           <input ref={coverRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: subjectColor }}>
-                {book.subject}
-              </span>
-              <span className="text-xs text-muted-foreground">{book.kid}</span>
-              {book.grade_level && <span className="text-xs text-muted-foreground">· {book.grade_level}</span>}
-            </div>
-            <h2 className="text-base font-semibold text-foreground">{book.name}</h2>
-            <div className="flex items-center gap-3 mt-2">
-              <div className="flex-1 max-w-xs">
-                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                  <span>{completed}/{units.length} units</span>
-                  <span>{pct}%</span>
+            {editingInfo ? (
+              <div className="space-y-2">
+                <input
+                  value={editForm.name}
+                  onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="Book name"
+                  className="w-full text-sm font-semibold border border-border rounded px-2.5 py-1.5 outline-none focus:border-[#534AB7]"
+                />
+                <div className="flex gap-2">
+                  <select
+                    value={editForm.subject}
+                    onChange={e => setEditForm(f => ({ ...f, subject: e.target.value }))}
+                    className="flex-1 text-xs border border-border rounded px-2 py-1.5 outline-none focus:border-[#534AB7]"
+                  >
+                    {SUBJECTS.map(s => <option key={s}>{s}</option>)}
+                  </select>
+                  <select
+                    value={editForm.kid}
+                    onChange={e => setEditForm(f => ({ ...f, kid: e.target.value }))}
+                    className="flex-1 text-xs border border-border rounded px-2 py-1.5 outline-none focus:border-[#534AB7]"
+                  >
+                    {KIDS.map(k => <option key={k}>{k}</option>)}
+                  </select>
+                  <input
+                    value={editForm.grade_level}
+                    onChange={e => setEditForm(f => ({ ...f, grade_level: e.target.value }))}
+                    placeholder="Grade"
+                    className="w-24 text-xs border border-border rounded px-2 py-1.5 outline-none focus:border-[#534AB7]"
+                  />
                 </div>
-                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div className="h-full rounded-full" style={{ backgroundColor: subjectColor, width: `${pct}%` }} />
+                <div className="flex gap-2">
+                  <button onClick={saveInfo} disabled={savingInfo} className="flex items-center gap-1 text-xs bg-[#534AB7] text-white px-3 py-1.5 rounded disabled:opacity-50">
+                    <Save className="w-3 h-3" /> {savingInfo ? "Saving..." : "Save"}
+                  </button>
+                  <button onClick={() => { setEditingInfo(false); setEditForm({ name: book.name, subject: book.subject, kid: book.kid, grade_level: book.grade_level || "" }); }} className="text-xs border border-border px-3 py-1.5 rounded hover:bg-muted">
+                    Cancel
+                  </button>
                 </div>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: subjectColor }}>
+                    {book.subject}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{book.kid}</span>
+                  {book.grade_level && <span className="text-xs text-muted-foreground">· {book.grade_level}</span>}
+                  <button onClick={() => setEditingInfo(true)} className="text-muted-foreground hover:text-[#534AB7] transition-colors ml-1">
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                </div>
+                <h2 className="text-base font-semibold text-foreground">{book.name}</h2>
+                <div className="flex items-center gap-3 mt-2">
+                  <div className="flex-1 max-w-xs">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                      <span>{completed}/{units.length} units</span>
+                      <span>{pct}%</span>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ backgroundColor: subjectColor, width: `${pct}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
@@ -192,7 +255,7 @@ Return ONLY a JSON object with a "units" array.`,
         </div>
 
         {/* Up next */}
-        {nextUnit && (
+        {nextUnit && !editingInfo && (
           <div className="mt-3 border-l-4 border-[#534AB7] bg-[#EEEDFE] px-3 py-2 rounded-r-md">
             <div className="text-xs text-[#534AB7] font-medium mb-0.5">Up next</div>
             <div className="flex items-center justify-between">
