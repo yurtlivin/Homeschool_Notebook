@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { X, Plus, Check, Trash2, Image as ImageIcon } from "lucide-react";
+import { X, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 
 export default function LessonDetailModal({ book, unit, onClose, onUpdate }) {
-  const [editing, setEditing] = useState(null); // null | "description" | "tasks"
+  const [expandedSections, setExpandedSections] = useState({ overview: true, photos: true });
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskCarryOver, setNewTaskCarryOver] = useState(false);
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   const addTask = async () => {
     if (!newTaskTitle.trim()) return;
@@ -57,190 +61,164 @@ export default function LessonDetailModal({ book, unit, onClose, onUpdate }) {
       u.id === unit.id ? { ...u, description: desc } : u
     );
     await base44.entities.CurriculumBook.update(book.id, { units: updatedUnits });
-    setEditing(null);
     onUpdate();
   };
 
   const tasks = unit.tasks || [];
-  const carryOverTasks = tasks.filter(t => t.carry_over && !t.completed);
+  const carryOverCount = tasks.filter(t => t.carry_over && !t.completed).length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-[680px] max-h-[85vh] overflow-hidden flex flex-col"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="border-b border-border px-6 py-4 shrink-0">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h2 className="text-lg font-semibold text-foreground">{unit.name}</h2>
-              {unit.pages && <div className="text-xs text-muted-foreground mt-1">Pages: {unit.pages}</div>}
-            </div>
-            <button onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground">
+        <div className="bg-blue-400 px-6 py-4 flex items-center justify-between shrink-0">
+          <h2 className="text-lg font-bold text-slate-800">{unit.name}</h2>
+          <div className="flex items-center gap-3">
+            {unit.pages && <span className="text-sm font-semibold text-slate-700">PAGE {unit.pages}</span>}
+            <button onClick={onClose} className="p-1 text-slate-700 hover:text-slate-900">
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-border px-6 shrink-0">
-          {["overview", "tasks", "photos"].map(t => (
-            <button
-              key={t}
-              className={`text-xs px-4 py-2.5 border-b-2 transition-colors -mb-px capitalize ${
-                editing === t ? "border-[#534AB7] text-[#534AB7]" : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-          {/* Overview */}
-          {editing !== "tasks" && editing !== "photos" && (
-            <div className="space-y-3">
-              {editing === "description" ? (
-                <div>
-                  <textarea
-                    defaultValue={unit.description || ""}
-                    onBlur={e => updateDescription(e.target.value)}
-                    autoFocus
-                    placeholder="Add lesson description..."
-                    rows={3}
-                    className="w-full text-sm border border-border rounded px-3 py-2 resize-none outline-none focus:border-[#534AB7]"
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3 relative">
+          {/* Lesson Overview */}
+          <div className="border-b border-slate-200 pb-3">
+            <button
+              onClick={() => toggleSection("overview")}
+              className="flex items-center justify-between w-full text-left"
+            >
+              <span className="text-lg font-bold text-slate-900">Lesson Overview</span>
+              {expandedSections.overview ? (
+                <ChevronDown className="w-4 h-4 text-slate-600" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-slate-600" />
+              )}
+            </button>
+            {expandedSections.overview && (
+              <div
+                onClick={() => {
+                  const text = prompt("Edit lesson overview:", unit.description || "");
+                  if (text !== null) updateDescription(text);
+                }}
+                className="mt-3 cursor-pointer hover:bg-slate-50 p-3 rounded"
+              >
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  {unit.description || "Click to add overview..."}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Resources */}
+          <div className="border-b border-slate-200 pb-3">
+            <button
+              onClick={() => toggleSection("resources")}
+              className="flex items-center justify-between w-full text-left"
+            >
+              <span className="text-lg font-bold text-slate-900">Resources</span>
+              <ChevronRight className="w-4 h-4 text-slate-600" />
+            </button>
+            {expandedSections.resources && unit.resources && unit.resources.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {unit.resources.map(r => (
+                  <div key={r.id} className="text-xs bg-slate-50 p-2 rounded">
+                    <div className="font-medium text-slate-900">{r.title}</div>
+                    {r.source && <div className="text-slate-600">{r.source}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Tasks/Checklist */}
+          <div className="border-b border-slate-200 pb-3">
+            <button
+              onClick={() => toggleSection("tasks")}
+              className="flex items-center justify-between w-full text-left"
+            >
+              <span className="text-lg font-bold text-slate-900">Tasks/Checklist</span>
+              <ChevronRight className="w-4 h-4 text-slate-600" />
+            </button>
+            {expandedSections.tasks && (
+              <div className="mt-3 space-y-2">
+                {tasks.map(t => (
+                  <div key={t.id} className="flex items-center gap-2 group">
+                    <input
+                      type="checkbox"
+                      checked={t.completed}
+                      onChange={() => toggleTask(t.id)}
+                      className="w-3.5 h-3.5 accent-blue-500 cursor-pointer"
+                    />
+                    <span className={`text-xs flex-1 ${t.completed ? "line-through text-slate-400" : "text-slate-700"}`}>
+                      {t.title}
+                    </span>
+                    {t.carry_over && <span className="text-[9px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded">Carry</span>}
+                    <button
+                      onClick={() => removeTask(t.id)}
+                      className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                <div className="flex gap-2 pt-2 border-t border-slate-200">
+                  <input
+                    value={newTaskTitle}
+                    onChange={e => setNewTaskTitle(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") addTask(); }}
+                    placeholder="Add task..."
+                    className="flex-1 text-xs border border-slate-300 rounded px-2 py-1.5 outline-none focus:border-blue-400"
                   />
-                  <button onClick={() => setEditing(null)} className="text-xs text-muted-foreground hover:text-foreground mt-2">
-                    Done
+                  <button onClick={addTask} className="text-xs bg-blue-500 text-white px-2 py-1.5 rounded hover:bg-blue-600">
+                    <Plus className="w-3 h-3" />
                   </button>
                 </div>
-              ) : (
-                <div
-                  onClick={() => setEditing("description")}
-                  className="bg-muted/30 rounded-lg p-4 cursor-pointer hover:bg-muted/50 transition-colors min-h-[80px] flex items-start"
-                >
-                  <div className="flex-1">
-                    <div className="text-xs text-muted-foreground font-medium mb-1">Lesson Overview</div>
-                    <p className="text-sm text-foreground">{unit.description || "Click to add description..."}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Resources */}
-              {unit.resources && unit.resources.length > 0 && (
-                <div>
-                  <div className="text-xs font-semibold text-muted-foreground mb-2">Resources</div>
-                  <div className="space-y-1.5">
-                    {unit.resources.map(r => (
-                      <div key={r.id} className="text-xs bg-white border border-border rounded p-2">
-                        <div className="font-medium text-foreground">{r.title}</div>
-                        {r.source && <div className="text-muted-foreground">{r.source}</div>}
-                        {r.description && <div className="text-muted-foreground mt-1">{r.description}</div>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Tasks */}
-          {editing === "tasks" || editing === null ? (
-            <div className="space-y-3">
-              {carryOverTasks.length > 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                  <div className="text-xs font-semibold text-amber-700 mb-2">Carry-over Tasks</div>
-                  <div className="space-y-1.5">
-                    {carryOverTasks.map(t => (
-                      <div key={t.id} className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={t.completed}
-                          onChange={() => toggleTask(t.id)}
-                          className="w-3.5 h-3.5 accent-amber-600 cursor-pointer"
-                        />
-                        <span className={`text-xs ${t.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                          {t.title}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <div className="text-xs font-semibold text-muted-foreground mb-2">Lesson Tasks</div>
-                <div className="space-y-1.5">
-                  {tasks.filter(t => !t.carry_over).map(t => (
-                    <div key={t.id} className="flex items-center gap-2 group">
-                      <input
-                        type="checkbox"
-                        checked={t.completed}
-                        onChange={() => toggleTask(t.id)}
-                        className="w-3.5 h-3.5 accent-[#534AB7] cursor-pointer"
-                      />
-                      <span className={`flex-1 text-xs ${t.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                        {t.title}
-                      </span>
-                      <button
-                        onClick={() => removeTask(t.id)}
-                        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500 transition-opacity"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
               </div>
-
-              {/* Add task */}
-              <div className="flex gap-2 pt-2 border-t border-border">
-                <input
-                  value={newTaskTitle}
-                  onChange={e => setNewTaskTitle(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter") addTask(); }}
-                  placeholder="Add task..."
-                  className="flex-1 text-xs border border-border rounded px-2.5 py-1.5 outline-none focus:border-[#534AB7]"
-                />
-                <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={newTaskCarryOver}
-                    onChange={e => setNewTaskCarryOver(e.target.checked)}
-                    className="w-3 h-3 accent-amber-600"
-                  />
-                  <span>Carry</span>
-                </label>
-                <button onClick={addTask} className="text-xs bg-[#534AB7] text-white px-3 py-1.5 rounded hover:bg-[#4340a0]">
-                  <Plus className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          ) : null}
+            )}
+          </div>
 
           {/* Photos */}
-          {editing === "photos" || editing === null ? (
-            <div className="space-y-3">
-              {unit.unit_photos && unit.unit_photos.length > 0 ? (
-                <div className="grid grid-cols-3 gap-2">
-                  {unit.unit_photos.map(p => (
-                    <div key={p.id} className="relative group">
-                      <img src={p.url} alt="" className="w-full h-24 object-cover rounded border border-border" />
-                      {p.caption && (
-                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded">
-                          <p className="text-[10px] text-white text-center px-1">{p.caption}</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+          <div className="pb-3">
+            <button
+              onClick={() => toggleSection("photos")}
+              className="flex items-center justify-between w-full text-left"
+            >
+              <span className="text-lg font-bold text-slate-900">Photos</span>
+              {expandedSections.photos ? (
+                <ChevronDown className="w-4 h-4 text-slate-600" />
               ) : (
-                <p className="text-xs text-muted-foreground text-center py-6">No photos yet. Upload from the Photos tab.</p>
+                <ChevronRight className="w-4 h-4 text-slate-600" />
               )}
+            </button>
+            {expandedSections.photos && (
+              <div className="mt-3">
+                {unit.unit_photos && unit.unit_photos.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {unit.unit_photos.map(p => (
+                      <img key={p.id} src={p.url} alt="" className="w-full h-20 object-cover rounded border border-slate-200" />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500 text-center py-4">No photos yet.</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Carry-over Badge */}
+          {carryOverCount > 0 && (
+            <div className="fixed bottom-6 right-6 flex items-center justify-center w-16 h-16 bg-orange-500 text-white rounded-full shadow-lg">
+              <div className="text-center">
+                <div className="text-xl font-bold">{carryOverCount}</div>
+                <div className="text-[10px] leading-tight">Carry-over<br />tasks</div>
+              </div>
             </div>
-          ) : null}
+          )}
         </div>
       </div>
     </div>
