@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { SUBJECT_COLORS } from "@/lib/constants";
-import { Camera, Plus, X, Trash2, Check, Pencil, Image, Calendar, BookOpen, StickyNote, MapPin } from "lucide-react";
+import { Camera, Plus, X, Trash2, Check, Pencil, Image, Calendar, BookOpen, StickyNote, MapPin, Sparkles, Upload } from "lucide-react";
 import UnitRow from "./UnitRow";
 import BookMiniCalendar from "./BookMiniCalendar";
 import BookPhotoGallery from "./BookPhotoGallery";
@@ -18,7 +18,12 @@ export default function BookDetailPanel({ book, onRefresh, onClose }) {
   const [addingTrip, setAddingTrip] = useState(false);
   const [newTrip, setNewTrip] = useState({ title: "", date: "", unit_id: "", note: "" });
   const [confirmArchive, setConfirmArchive] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanPreview, setScanPreview] = useState(null);
+  const [scannedUnits, setScannedUnits] = useState([]);
+  const [showScanModal, setShowScanModal] = useState(false);
   const coverRef = useRef();
+  const scanRef = useRef();
 
   const units = book.units || [];
   const fieldTrips = book.field_trips || [];
@@ -78,6 +83,53 @@ export default function BookDetailPanel({ book, onRefresh, onClose }) {
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
     await base44.entities.CurriculumBook.update(book.id, { cover_image: file_url });
     onRefresh();
+  };
+
+  const handleScanImage = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setScanPreview(URL.createObjectURL(file));
+    setScanning(true);
+    setScannedUnits([]);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const result = await base44.integrations.Core.InvokeLLM({
+      prompt: `You are analyzing an image of a homeschool curriculum book (table of contents, index, or chapter list page).
+Extract all chapters, lessons, or units you can find.
+For each unit extract: name (the chapter/lesson title) and pages (page range as a string like "pp. 12–24", leave blank if not visible).
+Return ONLY a JSON object with a "units" array.`,
+      file_urls: [file_url],
+      response_json_schema: {
+        type: "object",
+        properties: {
+          units: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                pages: { type: "string" }
+              }
+            }
+          }
+        }
+      }
+    });
+    setScannedUnits((result.units || []).map((u, i) => ({ ...u, id: `u-scan-${Date.now()}-${i}` })));
+    setScanning(false);
+  };
+
+  const importScannedUnits = async () => {
+    const newUnits = scannedUnits.filter(u => u.name.trim()).map(u => ({
+      id: `u-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      name: u.name.trim(),
+      pages: u.pages || "",
+      completed: false,
+      resources: []
+    }));
+    await saveUnits([...units, ...newUnits]);
+    setShowScanModal(false);
+    setScanPreview(null);
+    setScannedUnits([]);
   };
 
   const archiveBook = async () => {
@@ -211,9 +263,90 @@ export default function BookDetailPanel({ book, onRefresh, onClose }) {
                 <button onClick={() => { setAddingUnit(false); setNewUnitName(""); setNewUnitPages(""); }} className="text-xs border border-border px-2 py-1.5 rounded">✕</button>
               </div>
             ) : (
-              <button onClick={() => setAddingUnit(true)} className="flex items-center gap-1 text-xs text-[#534AB7] hover:underline mt-2">
-                <Plus className="w-3 h-3" /> Add unit
-              </button>
+              <div className="flex items-center gap-3 mt-2">
+                <button onClick={() => setAddingUnit(true)} className="flex items-center gap-1 text-xs text-[#534AB7] hover:underline">
+                  <Plus className="w-3 h-3" /> Add unit
+                </button>
+                <button onClick={() => setShowScanModal(true)} className="flex items-center gap-1.5 text-xs text-[#534AB7] border border-[#534AB7]/30 px-2.5 py-1.5 rounded-md hover:bg-[#EEEDFE] transition-colors">
+                  <Sparkles className="w-3 h-3" /> Import with AI
+                </button>
+              </div>
+            )}
+
+            {/* Scan Modal */}
+            {showScanModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => { setShowScanModal(false); setScanPreview(null); setScannedUnits([]); }}>
+                <div className="bg-white border border-border rounded-xl w-[480px] max-h-[80vh] flex flex-col shadow-xl" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#534AB7]" />
+                      <span className="text-sm font-semibold">Import units with AI</span>
+                    </div>
+                    <button onClick={() => { setShowScanModal(false); setScanPreview(null); setScannedUnits([]); }}><X className="w-4 h-4 text-muted-foreground" /></button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+                    <p className="text-xs text-muted-foreground">Upload a photo of the table of contents or index page — AI will extract the units automatically.</p>
+                    <div
+                      onClick={() => scanRef.current?.click()}
+                      className={`border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors py-8 ${scanPreview ? "border-[#534AB7]/30 bg-[#EEEDFE]/30" : "border-border hover:border-[#534AB7]/50 hover:bg-muted/20"}`}
+                    >
+                      {scanPreview ? (
+                        <img src={scanPreview} alt="preview" className="max-h-40 object-contain rounded" />
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-muted-foreground mb-2" />
+                          <span className="text-sm text-muted-foreground">Upload table of contents image</span>
+                        </>
+                      )}
+                    </div>
+                    <input ref={scanRef} type="file" accept="image/*" className="hidden" onChange={handleScanImage} />
+
+                    {scanning && (
+                      <div className="flex items-center justify-center gap-2 py-3 text-sm text-[#534AB7]">
+                        <div className="w-4 h-4 border-2 border-[#534AB7] border-t-transparent rounded-full animate-spin" />
+                        Scanning with AI...
+                      </div>
+                    )}
+
+                    {scannedUnits.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="text-xs font-medium text-[#534AB7]">Found {scannedUnits.length} units — review before importing:</div>
+                        <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                          {scannedUnits.map((u, i) => (
+                            <div key={u.id} className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground w-5 text-right shrink-0">{i + 1}.</span>
+                              <input
+                                value={u.name}
+                                onChange={e => setScannedUnits(prev => prev.map((x, idx) => idx === i ? { ...x, name: e.target.value } : x))}
+                                className="flex-1 text-xs border border-border rounded px-2 py-1 outline-none focus:border-[#534AB7]"
+                              />
+                              <input
+                                value={u.pages}
+                                onChange={e => setScannedUnits(prev => prev.map((x, idx) => idx === i ? { ...x, pages: e.target.value } : x))}
+                                placeholder="Pages"
+                                className="w-20 text-xs border border-border rounded px-2 py-1 outline-none focus:border-[#534AB7]"
+                              />
+                              <button onClick={() => setScannedUnits(prev => prev.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-red-500">
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex justify-end gap-2 px-5 py-4 border-t border-border shrink-0">
+                    <button onClick={() => { setShowScanModal(false); setScanPreview(null); setScannedUnits([]); }} className="text-xs border border-border rounded px-3 py-1.5 hover:bg-muted">Cancel</button>
+                    <button
+                      onClick={importScannedUnits}
+                      disabled={scannedUnits.length === 0}
+                      className="text-xs bg-[#534AB7] text-white rounded px-4 py-1.5 hover:bg-[#4340a0] disabled:opacity-50"
+                    >
+                      Import {scannedUnits.length > 0 ? `${scannedUnits.length} units` : ""}
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         )}
