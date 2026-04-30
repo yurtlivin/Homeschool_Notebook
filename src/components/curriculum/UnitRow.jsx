@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Pencil, Trash2, Check, X } from "lucide-react";
+import { Pencil, Trash2, Check, X, ChevronRight } from "lucide-react";
 import UnitResources from "./UnitResources";
 
-export default function UnitRow({ unit, isNext, onToggle, onUpdate, onRemove, onEditDate }) {
+export default function UnitRow({ unit, isNext, onToggle, onUpdate, onRemove, onEditDate, onSelectLesson }) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(unit.name);
   const [editPages, setEditPages] = useState(unit.pages || "");
@@ -15,6 +15,8 @@ export default function UnitRow({ unit, isNext, onToggle, onUpdate, onRemove, on
   };
 
   const resourceCount = (unit.resources || []).length;
+  const taskCount = (unit.tasks || []).length;
+  const carryOverCount = (unit.tasks || []).filter(t => t.carry_over && !t.completed).length;
 
   const saveEdit = () => {
     onUpdate({ name: editName, pages: editPages });
@@ -61,12 +63,23 @@ export default function UnitRow({ unit, isNext, onToggle, onUpdate, onRemove, on
           onChange={e => onToggle(e.target.checked)}
           className="w-3.5 h-3.5 accent-[#534AB7] cursor-pointer shrink-0"
         />
-        <div className="flex-1 min-w-0">
-          <span className={`text-xs ${unit.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
-            {unit.name}
-          </span>
-          {unit.pages && <span className="text-[10px] text-muted-foreground ml-2">{unit.pages}</span>}
-        </div>
+        <button
+          onClick={() => onSelectLesson(unit)}
+          className="flex-1 min-w-0 text-left group/lesson hover:text-[#534AB7] transition-colors flex items-center justify-between"
+        >
+          <div>
+            <span className={`text-xs ${unit.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
+              {unit.name}
+            </span>
+            {unit.pages && <span className="text-[10px] text-muted-foreground ml-2">{unit.pages}</span>}
+            {carryOverCount > 0 && (
+              <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full ml-2">
+                {carryOverCount} carry-over
+              </span>
+            )}
+          </div>
+          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover/lesson:text-[#534AB7] opacity-0 group-hover:opacity-100 transition-all shrink-0" />
+        </button>
         {unit.completion_date && (
           <button
             onClick={onEditDate}
@@ -77,6 +90,11 @@ export default function UnitRow({ unit, isNext, onToggle, onUpdate, onRemove, on
         )}
         {hovered && (
           <div className="flex items-center gap-1 shrink-0">
+            {taskCount > 0 && (
+              <button className="text-[9px] text-[#534AB7] font-medium" title="Tasks">
+                {taskCount} task{taskCount !== 1 ? "s" : ""}
+              </button>
+            )}
             <button
               onClick={() => setShowResources(r => !r)}
               className="p-1 text-muted-foreground hover:text-[#534AB7] text-[10px] leading-none"
@@ -92,13 +110,22 @@ export default function UnitRow({ unit, isNext, onToggle, onUpdate, onRemove, on
             </button>
           </div>
         )}
-        {!hovered && resourceCount > 0 && (
-          <button
-            onClick={() => setShowResources(r => !r)}
-            className="text-[10px] text-[#534AB7] shrink-0"
-          >
-            +{resourceCount}
-          </button>
+        {!hovered && (resourceCount > 0 || taskCount > 0) && (
+          <div className="flex items-center gap-1.5 shrink-0">
+            {taskCount > 0 && (
+              <button className="text-[9px] text-[#534AB7] font-medium">
+                {taskCount}📋
+              </button>
+            )}
+            {resourceCount > 0 && (
+              <button
+                onClick={() => setShowResources(r => !r)}
+                className="text-[10px] text-[#534AB7]"
+              >
+                +{resourceCount}
+              </button>
+            )}
+          </div>
         )}
       </div>
       {showResources && (

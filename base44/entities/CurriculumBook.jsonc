@@ -40,6 +40,9 @@
           "pages": {
             "type": "string"
           },
+          "description": {
+            "type": "string"
+          },
           "completed": {
             "type": "boolean",
             "default": false
@@ -80,6 +83,51 @@
                 "completed": {
                   "type": "boolean",
                   "default": false
+                }
+              }
+            }
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "completed": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "carry_over": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            }
+          },
+          "unit_photos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                },
+                "caption": {
+                  "type": "string"
+                },
+                "date": {
+                  "type": "string"
                 }
               }
             }

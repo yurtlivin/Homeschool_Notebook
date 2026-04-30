@@ -7,6 +7,7 @@ import BookMiniCalendar from "./BookMiniCalendar";
 import BookPhotoGallery from "./BookPhotoGallery";
 import CompletionDatePicker from "./CompletionDatePicker";
 import BulkScheduler from "./BulkScheduler";
+import LessonDetailModal from "./LessonDetailModal";
 
 const TABS = ["Units", "Photos", "Field Trips", "Notes", "Schedule", "Plan"];
 const SUBJECTS = Object.keys(SUBJECT_COLORS);
@@ -30,6 +31,7 @@ export default function BookDetailPanel({ book, onRefresh, onClose }) {
   const [editForm, setEditForm] = useState({ name: book.name, subject: book.subject, kid: book.kid, grade_level: book.grade_level || "" });
   const [savingInfo, setSavingInfo] = useState(false);
   const [datePickerUnitId, setDatePickerUnitId] = useState(null);
+  const [selectedLesson, setSelectedLesson] = useState(null);
   const coverRef = useRef();
   const scanRef = useRef();
 
@@ -312,6 +314,7 @@ Return ONLY a JSON object with a "units" array.`,
                     onUpdate={(changes) => updateUnit(unit.id, changes)}
                     onRemove={() => removeUnit(unit.id)}
                     onEditDate={unit.completed ? () => setDatePickerUnitId(unit.id) : null}
+                    onSelectLesson={setSelectedLesson}
                   />
                   {datePickerUnitId === unit.id && unit.completion_date && (
                     <CompletionDatePicker
@@ -540,6 +543,16 @@ Return ONLY a JSON object with a "units" array.`,
             </div>
           </div>
         </div>
+      )}
+
+      {/* Lesson detail modal */}
+      {selectedLesson && (
+        <LessonDetailModal
+          book={book}
+          unit={selectedLesson}
+          onClose={() => setSelectedLesson(null)}
+          onUpdate={onRefresh}
+        />
       )}
     </div>
   );
