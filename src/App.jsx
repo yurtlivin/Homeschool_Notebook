@@ -8,7 +8,6 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { UserProvider } from '@/lib/userContext';
 import AppLayout from '@/components/layout/AppLayout';
 import Home from '@/pages/Home';
-import Curriculum from '@/pages/Curriculum';
 import CurriculumPlanner from '@/pages/CurriculumPlanner';
 import Planner from '@/pages/Planner';
 import Books from '@/pages/Books';
