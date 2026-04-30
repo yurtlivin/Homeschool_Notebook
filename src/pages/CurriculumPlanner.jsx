@@ -121,7 +121,7 @@ function KidSection({ label, color, bg, books, onSelect }) {
         </span>
         <span className="text-xs text-muted-foreground">{books.length} book{books.length !== 1 ? "s" : ""}</span>
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         {books.map(book => <BookCard key={book.id} book={book} onSelect={onSelect} />)}
       </div>
     </div>
@@ -144,7 +144,7 @@ function BookCard({ book, onSelect }) {
       <div className="h-1.5" style={{ backgroundColor: subjectColor }} />
 
       {/* Cover image or placeholder */}
-      <div className="h-48 bg-muted/30 overflow-hidden">
+      <div className="h-72 bg-muted/30 overflow-hidden">
         {book.cover_image ? (
           <img src={book.cover_image} alt="cover" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
         ) : (
