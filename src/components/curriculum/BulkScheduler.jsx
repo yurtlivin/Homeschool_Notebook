@@ -1,42 +1,28 @@
 import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, subWeeks } from "date-fns";
-import { Plus, X, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trash2, X } from "lucide-react";
 
 export default function BulkScheduler({ book, units, onRefresh }) {
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [unitId, setUnitId] = useState("");
-  const [assignments, setAssignments] = useState({}); // { "2026-04-30": "13-15", ... }
+  const [dayData, setDayData] = useState({}); // { "2026-04-30": { pages: "13-15", notes: "Watch video X" } }
   const [editingDay, setEditingDay] = useState(null);
-  const [editInput, setEditInput] = useState("");
   const [saving, setSaving] = useState(false);
 
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd })
     .filter(d => d.getDay() >= 1 && d.getDay() <= 5); // Mon-Fri only
 
-  const handleDayClick = (day) => {
-    const ds = format(day, "yyyy-MM-dd");
-    setEditingDay(ds);
-    setEditInput(assignments[ds] || "");
+  const updateDayData = (ds, field, value) => {
+    setDayData(prev => ({
+      ...prev,
+      [ds]: { ...prev[ds], [field]: value },
+    }));
   };
 
-  const saveAssignment = () => {
-    if (editInput.trim()) {
-      setAssignments(prev => ({ ...prev, [editingDay]: editInput.trim() }));
-    } else {
-      setAssignments(prev => {
-        const next = { ...prev };
-        delete next[editingDay];
-        return next;
-      });
-    }
-    setEditingDay(null);
-    setEditInput("");
-  };
-
-  const removeAssignment = (ds) => {
-    setAssignments(prev => {
+  const removeDay = (ds) => {
+    setDayData(prev => {
       const next = { ...prev };
       delete next[ds];
       return next;
@@ -44,18 +30,18 @@ export default function BulkScheduler({ book, units, onRefresh }) {
   };
 
   const createAssignments = async () => {
-    const assignmentList = Object.entries(assignments).filter(([_, pages]) => pages?.trim());
+    const assignmentList = Object.entries(dayData).filter(([_, data]) => data?.pages?.trim());
     if (assignmentList.length === 0) return;
     setSaving(true);
 
     await Promise.all(
-      assignmentList.map(([date, pages]) =>
+      assignmentList.map(([date, data]) =>
         base44.entities.PlannerItem.create({
           date,
           kid: book.kid,
           subject: book.subject,
-          title: `${book.name}: pages ${pages}`,
-          detail: `pages ${pages}`,
+          title: `${book.name}: pages ${data.pages}`,
+          detail: data.notes ? `pages ${data.pages}\n${data.notes}` : `pages ${data.pages}`,
           curriculum_book_id: book.id,
           curriculum_unit_id: unitId || undefined,
         })
@@ -63,16 +49,16 @@ export default function BulkScheduler({ book, units, onRefresh }) {
     );
 
     setSaving(false);
-    setAssignments({});
+    setDayData({});
     setUnitId("");
     onRefresh();
   };
 
-  const assignmentCount = Object.values(assignments).filter(p => p?.trim()).length;
+  const assignmentCount = Object.values(dayData).filter(d => d?.pages?.trim()).length;
 
   return (
     <div className="space-y-4">
-      <div className="text-xs text-muted-foreground">Click a day to assign page ranges. Organize one unit across multiple days.</div>
+      <div className="text-xs text-muted-foreground">Assign pages and notes across the week—add videos, resources, or reminders per day.</div>
 
       {/* Unit selector */}
       <div>
@@ -87,76 +73,73 @@ export default function BulkScheduler({ book, units, onRefresh }) {
         </select>
       </div>
 
-      {/* Week calendar */}
-      <div className="bg-white border border-border rounded-md p-3 space-y-3">
-        <div className="flex items-center justify-between mb-2">
-          <button onClick={() => setWeekStart(d => subWeeks(d, 1))} className="p-1 hover:bg-muted rounded">
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </button>
-          <span className="text-xs font-medium">{format(weekStart, "MMM d")} – {format(weekEnd, "MMM d, yyyy")}</span>
-          <button onClick={() => setWeekStart(d => addWeeks(d, 1))} className="p-1 hover:bg-muted rounded">
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
+      {/* Week navigation */}
+      <div className="flex items-center justify-between px-2">
+        <button onClick={() => setWeekStart(d => subWeeks(d, 1))} className="p-1 hover:bg-muted rounded">
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <span className="text-xs font-medium">{format(weekStart, "MMM d")} – {format(weekEnd, "MMM d")}</span>
+        <button onClick={() => setWeekStart(d => addWeeks(d, 1))} className="p-1 hover:bg-muted rounded">
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
 
-        <div className="space-y-1.5">
-          {weekDays.map(day => {
-            const ds = format(day, "yyyy-MM-dd");
-            const pages = assignments[ds];
-            const isEditing = editingDay === ds;
+      {/* Horizontal calendar grid */}
+      <div className="grid grid-cols-5 gap-2">
+        {weekDays.map(day => {
+          const ds = format(day, "yyyy-MM-dd");
+          const data = dayData[ds] || { pages: "", notes: "" };
+          const isEditing = editingDay === ds;
 
-            return (
-              <div key={ds} className={`border rounded-md p-2.5 transition-colors ${isEditing ? "bg-[#EEEDFE]" : "bg-muted/20"}`}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-medium">{format(day, "EEE, M/d")}</span>
-                  {pages && !isEditing && (
-                    <button
-                      onClick={() => removeAssignment(ds)}
-                      className="text-muted-foreground hover:text-red-500 p-0.5"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-
-                {isEditing ? (
-                  <div className="flex gap-1.5">
-                    <input
-                      value={editInput}
-                      onChange={e => setEditInput(e.target.value)}
-                      placeholder="13-15"
-                      autoFocus
-                      className="flex-1 text-xs border border-border rounded px-2 py-1.5 outline-none focus:border-[#534AB7]"
-                    />
-                    <button
-                      onClick={saveAssignment}
-                      className="text-xs bg-[#534AB7] text-white px-2 py-1.5 rounded hover:bg-[#4340a0]"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={() => setEditingDay(null)}
-                      className="text-xs border border-border px-2 py-1.5 rounded hover:bg-muted"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
+          return (
+            <div
+              key={ds}
+              className={`border rounded-lg p-2 transition-colors ${
+                isEditing ? "bg-[#EEEDFE] border-[#534AB7]" : data.pages ? "bg-[#EEEDFE] border-[#534AB7]/30" : "bg-white hover:bg-muted/30"
+              }`}
+            >
+              {/* Day header */}
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-semibold text-foreground">{format(day, "EEE")}</span>
+                <span className="text-[10px] text-muted-foreground">{format(day, "d")}</span>
+                {data.pages && !isEditing && (
                   <button
-                    onClick={() => handleDayClick(day)}
-                    className={`w-full text-left text-xs py-1.5 px-2 rounded transition-colors ${
-                      pages
-                        ? "bg-[#534AB7] text-white font-medium"
-                        : "text-muted-foreground hover:bg-muted/50 border border-dashed border-border"
-                    }`}
+                    onClick={() => removeDay(ds)}
+                    className="text-muted-foreground hover:text-red-500 p-0.5 -mr-1"
                   >
-                    {pages ? `pages ${pages}` : "+ Add pages"}
+                    <Trash2 className="w-2.5 h-2.5" />
                   </button>
                 )}
               </div>
-            );
-          })}
-        </div>
+
+              {/* Pages input */}
+              <div className="mb-2">
+                <input
+                  value={data.pages}
+                  onChange={e => updateDayData(ds, "pages", e.target.value)}
+                  onFocus={() => setEditingDay(ds)}
+                  onBlur={() => setEditingDay(null)}
+                  placeholder="Pages"
+                  className={`w-full text-[10px] border rounded px-1.5 py-1 outline-none focus:border-[#534AB7] ${
+                    data.pages ? "bg-white border-[#534AB7]" : "border-border"
+                  }`}
+                />
+              </div>
+
+              {/* Notes input */}
+              <div>
+                <textarea
+                  value={data.notes}
+                  onChange={e => updateDayData(ds, "notes", e.target.value)}
+                  onFocus={() => setEditingDay(ds)}
+                  onBlur={() => setEditingDay(null)}
+                  placeholder="Notes, video, resource..."
+                  className="w-full text-[10px] border border-border rounded px-1.5 py-1 resize-none h-12 outline-none focus:border-[#534AB7]"
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Create button */}
