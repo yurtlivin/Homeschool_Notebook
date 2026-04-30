@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, subWeeks } from "date-fns";
 import { ChevronLeft, ChevronRight, Trash2, X } from "lucide-react";
@@ -9,6 +9,27 @@ export default function BulkScheduler({ book, units, onRefresh }) {
   const [dayData, setDayData] = useState({}); // { "2026-04-30": { pages: "13-15", notes: "Watch video X" } }
   const [editingDay, setEditingDay] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadScheduledItems();
+  }, [book.id]);
+
+  const loadScheduledItems = async () => {
+    setLoading(true);
+    const items = await base44.entities.PlannerItem.filter({ curriculum_book_id: book.id });
+    const newDayData = {};
+    items.forEach(item => {
+      if (item.date) {
+        newDayData[item.date] = {
+          pages: item.detail?.split('\n')[0] || item.title || "",
+          notes: item.detail?.includes('\n') ? item.detail.split('\n').slice(1).join('\n') : "",
+        };
+      }
+    });
+    setDayData(newDayData);
+    setLoading(false);
+  };
 
   const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd })
@@ -55,6 +76,10 @@ export default function BulkScheduler({ book, units, onRefresh }) {
   };
 
   const assignmentCount = Object.values(dayData).filter(d => d?.pages?.trim()).length;
+
+  if (loading) {
+    return <div className="text-sm text-muted-foreground py-4">Loading schedule...</div>;
+  }
 
   return (
     <div className="space-y-4">
