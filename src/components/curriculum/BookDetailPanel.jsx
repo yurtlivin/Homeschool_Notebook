@@ -522,7 +522,12 @@ Return ONLY a JSON object with a "units" array.`,
 
         {/* Schedule */}
         {tab === "Schedule" && (
-          <BulkScheduler book={book} units={units} onRefresh={onRefresh} />
+          <BulkScheduler 
+            book={book} 
+            units={units} 
+            onRefresh={onRefresh}
+            onLessonSelected={selectedLesson}
+          />
         )}
 
         {/* Plan */}
@@ -552,6 +557,7 @@ Return ONLY a JSON object with a "units" array.`,
           unit={selectedLesson}
           onClose={() => setSelectedLesson(null)}
           onUpdate={onRefresh}
+          onViewInSchedule={() => setTab("Schedule")}
         />
       )}
     </div>

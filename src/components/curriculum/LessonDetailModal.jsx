@@ -2,7 +2,7 @@ import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { X, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 
-export default function LessonDetailModal({ book, unit, onClose, onUpdate }) {
+export default function LessonDetailModal({ book, unit, onClose, onUpdate, onViewInSchedule }) {
   const [expandedSections, setExpandedSections] = useState({ overview: true, photos: true });
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskCarryOver, setNewTaskCarryOver] = useState(false);
@@ -75,13 +75,13 @@ export default function LessonDetailModal({ book, unit, onClose, onUpdate }) {
       >
         {/* Header */}
         <div className="bg-blue-400 px-6 py-4 flex items-center justify-between shrink-0">
-          <h2 className="text-lg font-bold text-slate-800">{unit.name}</h2>
-          <div className="flex items-center gap-3">
-            {unit.pages && <span className="text-sm font-semibold text-slate-700">PAGE {unit.pages}</span>}
-            <button onClick={onClose} className="p-1 text-slate-700 hover:text-slate-900">
-              <X className="w-4 h-4" />
-            </button>
+          <div>
+            <h2 className="text-lg font-bold text-slate-800">{unit.name}</h2>
+            {unit.pages && <span className="text-xs font-semibold text-slate-600">Pages: {unit.pages}</span>}
           </div>
+          <button onClick={onClose} className="p-1 text-slate-700 hover:text-slate-900">
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Content */}
@@ -220,6 +220,21 @@ export default function LessonDetailModal({ book, unit, onClose, onUpdate }) {
             </div>
           )}
         </div>
+
+        {/* View in Schedule Button */}
+        {onViewInSchedule && (
+          <div className="border-t border-slate-200 px-6 py-3 bg-slate-50 shrink-0">
+            <button
+              onClick={() => {
+                onViewInSchedule();
+                onClose();
+              }}
+              className="w-full text-sm font-semibold text-white bg-blue-500 hover:bg-blue-600 py-2 rounded transition-colors"
+            >
+              View Assignments in Schedule
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

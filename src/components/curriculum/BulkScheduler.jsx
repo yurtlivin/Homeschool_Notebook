@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, addWeeks, subWeeks, startOfMonth, endOfMonth, addMonths, subMonths, getDay } from "date-fns";
 import { ChevronLeft, ChevronRight, Trash2, X } from "lucide-react";
 
-export default function BulkScheduler({ book, units, onRefresh }) {
+export default function BulkScheduler({ book, units, onRefresh, onLessonSelected }) {
   const [view, setView] = useState("week"); // "week" | "month"
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [monthStart, setMonthStart] = useState(startOfMonth(new Date()));
@@ -13,10 +13,20 @@ export default function BulkScheduler({ book, units, onRefresh }) {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [conflictDialog, setConflictDialog] = useState(null); // "ask" | null
+  const [highlightedUnitId, setHighlightedUnitId] = useState(null);
 
   useEffect(() => {
     loadScheduledItems();
   }, [book.id]);
+
+  useEffect(() => {
+    // When a lesson is selected from detail modal, highlight it briefly
+    if (onLessonSelected?.id) {
+      setHighlightedUnitId(onLessonSelected.id);
+      const timer = setTimeout(() => setHighlightedUnitId(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [onLessonSelected]);
 
   const loadScheduledItems = async () => {
     setLoading(true);
@@ -207,16 +217,18 @@ export default function BulkScheduler({ book, units, onRefresh }) {
            const dayUnitColor = getUnitColor(data.unit_id);
            const isEditing = editingDay === ds;
 
+           const isHighlighted = highlightedUnitId === data.unit_id && data.unit_id;
+
            return (
-             <div
-               key={ds}
-               className={`border rounded-lg p-2 transition-colors ${
-                 isEditing ? "border-2" : data.pages ? "border-2" : "border bg-white hover:bg-muted/30"
-               }`}
-               style={{
-                 borderColor: isEditing || data.pages ? dayUnitColor : "inherit",
-                 backgroundColor: isEditing || data.pages ? dayUnitColor + "08" : "inherit",
-               }}
+              <div
+                key={ds}
+                className={`border rounded-lg p-2 transition-all ${
+                  isHighlighted ? "border-2 ring-2 ring-yellow-300" : isEditing ? "border-2" : data.pages ? "border-2" : "border bg-white hover:bg-muted/30"
+                }`}
+                style={{
+                  borderColor: isEditing || data.pages ? dayUnitColor : "inherit",
+                  backgroundColor: isHighlighted ? dayUnitColor + "20" : isEditing || data.pages ? dayUnitColor + "08" : "inherit",
+                }}
              >
                {/* Day header */}
                <div className="flex items-center justify-between mb-2">
