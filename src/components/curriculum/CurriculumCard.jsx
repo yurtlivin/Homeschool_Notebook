@@ -12,6 +12,7 @@ export default function CurriculumCard({ book, logEntries, onRefresh }) {
   const [newUnitName, setNewUnitName] = useState("");
   const [newUnitPages, setNewUnitPages] = useState("");
   const [showAll, setShowAll] = useState(false);
+  const [addingUnit, setAddingUnit] = useState(false);
   const [bookNotes, setBookNotes] = useState(book.notes || "");
   const [savingNotes, setSavingNotes] = useState(false);
   const [newTrip, setNewTrip] = useState({ title: "", date: "", unit_id: "" });
@@ -34,10 +35,11 @@ export default function CurriculumCard({ book, logEntries, onRefresh }) {
 
   const addUnit = async () => {
     if (!newUnitName.trim()) return;
-    const newUnit = { id: `u-${Date.now()}`, name: newUnitName.trim(), pages: newUnitPages.trim(), completed: false };
+    const newUnit = { id: `u-${Date.now()}`, name: newUnitName.trim(), pages: newUnitPages.trim(), completed: false, resources: [] };
     await saveUnits([...units, newUnit]);
     setNewUnitName("");
     setNewUnitPages("");
+    setAddingUnit(false);
   };
 
   const markUnitDone = async (unitId) => {
@@ -216,30 +218,36 @@ export default function CurriculumCard({ book, logEntries, onRefresh }) {
                 </button>
               )}
               {/* Add unit */}
-              <div className="flex gap-2 mt-3">
-                <input
-                  type="text"
-                  placeholder="Unit name"
-                  value={newUnitName}
-                  onChange={e => setNewUnitName(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter") addUnit(); }}
-                  className="flex-1 text-xs border border-border rounded px-2.5 py-1.5 outline-none focus:border-[#534AB7]"
-                />
-                <input
-                  type="text"
-                  placeholder="Pages"
-                  value={newUnitPages}
-                  onChange={e => setNewUnitPages(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter") addUnit(); }}
-                  className="w-20 text-xs border border-border rounded px-2.5 py-1.5 outline-none focus:border-[#534AB7]"
-                />
+              {addingUnit ? (
+                <div className="flex gap-2 mt-3">
+                  <input
+                    type="text"
+                    placeholder="Unit name"
+                    value={newUnitName}
+                    onChange={e => setNewUnitName(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") addUnit(); }}
+                    className="flex-1 text-xs border border-border rounded px-2.5 py-1.5 outline-none focus:border-[#534AB7]"
+                    autoFocus
+                  />
+                  <input
+                    type="text"
+                    placeholder="Pages"
+                    value={newUnitPages}
+                    onChange={e => setNewUnitPages(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") addUnit(); }}
+                    className="w-20 text-xs border border-border rounded px-2.5 py-1.5 outline-none focus:border-[#534AB7]"
+                  />
+                  <button onClick={addUnit} className="text-xs bg-[#534AB7] text-white px-3 py-1.5 rounded hover:bg-[#4340a0]">Add</button>
+                  <button onClick={() => { setAddingUnit(false); setNewUnitName(""); setNewUnitPages(""); }} className="text-xs border border-border px-2 py-1.5 rounded hover:bg-muted">✕</button>
+                </div>
+              ) : (
                 <button
-                  onClick={addUnit}
-                  className="text-xs bg-[#534AB7] text-white px-3 py-1.5 rounded hover:bg-[#4340a0] flex items-center gap-1"
+                  onClick={() => setAddingUnit(true)}
+                  className="flex items-center gap-1 text-xs text-[#534AB7] hover:underline mt-3"
                 >
-                  <Plus className="w-3 h-3" /> Add
+                  <Plus className="w-3 h-3" /> Add unit
                 </button>
-              </div>
+              )}
             </div>
           )}
 
