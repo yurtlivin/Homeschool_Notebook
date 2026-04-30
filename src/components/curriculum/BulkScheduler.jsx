@@ -5,8 +5,7 @@ import { ChevronLeft, ChevronRight, Trash2, X } from "lucide-react";
 
 export default function BulkScheduler({ book, units, onRefresh }) {
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [unitId, setUnitId] = useState("");
-  const [dayData, setDayData] = useState({}); // { "2026-04-30": { pages: "13-15", notes: "Watch video X" } }
+  const [dayData, setDayData] = useState({}); // { "2026-04-30": { pages: "13-15", notes: "Watch video X", unit_id: "u-123" } }
   const [editingDay, setEditingDay] = useState(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -26,6 +25,7 @@ export default function BulkScheduler({ book, units, onRefresh }) {
           pages: item.detail?.split('\n')[0] || item.title || "",
           notes: item.detail?.includes('\n') ? item.detail.split('\n').slice(1).join('\n') : "",
           id: item.id, // track original IDs
+          unit_id: item.curriculum_unit_id || "", // store per-day unit
         };
       }
     });
@@ -92,7 +92,7 @@ export default function BulkScheduler({ book, units, onRefresh }) {
             title: `${book.name}: pages ${data.pages}`,
             detail: data.notes ? `pages ${data.pages}\n${data.notes}` : `pages ${data.pages}`,
             curriculum_book_id: book.id,
-            curriculum_unit_id: unitId || undefined,
+            curriculum_unit_id: data.unit_id || undefined,
           })
         )
       );
@@ -113,7 +113,7 @@ export default function BulkScheduler({ book, units, onRefresh }) {
             title: `${book.name}: pages ${data.pages}`,
             detail: data.notes ? `pages ${data.pages}\n${data.notes}` : `pages ${data.pages}`,
             curriculum_book_id: book.id,
-            curriculum_unit_id: unitId || undefined,
+            curriculum_unit_id: data.unit_id || undefined,
           })
         )
       );
@@ -130,7 +130,7 @@ export default function BulkScheduler({ book, units, onRefresh }) {
             title: `${book.name}: pages ${data.pages}`,
             detail: data.notes ? `pages ${data.pages}\n${data.notes}` : `pages ${data.pages}`,
             curriculum_book_id: book.id,
-            curriculum_unit_id: unitId || undefined,
+            curriculum_unit_id: data.unit_id || undefined,
           })
         )
       );
@@ -139,7 +139,6 @@ export default function BulkScheduler({ book, units, onRefresh }) {
     setSaving(false);
     setConflictDialog(null);
     setDayData({});
-    setUnitId("");
     await loadScheduledItems();
     onRefresh();
   };
@@ -157,49 +156,12 @@ export default function BulkScheduler({ book, units, onRefresh }) {
   units.forEach((u, i) => {
     unitColors[u.id] = colors[i % colors.length];
   });
-  const selectedUnitColor = unitId && unitColors[unitId] ? unitColors[unitId] : "#534AB7";
+
+  const getUnitColor = (unitId) => unitId && unitColors[unitId] ? unitColors[unitId] : "#534AB7";
 
   return (
     <div className="space-y-4">
-      <div className="text-xs text-muted-foreground">Assign pages and notes across the week—add videos, resources, or reminders per day.</div>
-
-      {/* Unit selector */}
-      {units.length > 0 && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Link to unit:</span>
-          <div className="flex flex-wrap gap-1.5">
-            <button
-              onClick={() => setUnitId("")}
-              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                !unitId
-                  ? "bg-[#534AB7] text-white border-[#534AB7]"
-                  : "border-border text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              None
-            </button>
-            {units.map(u => (
-              <button
-                key={u.id}
-                onClick={() => setUnitId(u.id)}
-                className={`text-xs px-2.5 py-1 rounded-full border transition-all truncate max-w-[150px] ${
-                  unitId === u.id
-                    ? "text-white border"
-                    : "border-border text-muted-foreground hover:opacity-80"
-                }`}
-                style={{
-                  backgroundColor: unitId === u.id ? unitColors[u.id] : "transparent",
-                  borderColor: unitId === u.id ? unitColors[u.id] : "inherit",
-                  color: unitId === u.id ? "white" : "inherit",
-                }}
-                title={u.name}
-              >
-                {u.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      <div className="text-xs text-muted-foreground">Assign pages and notes across the week—select a unit per day to link the lesson.</div>
 
       {/* Week navigation */}
       <div className="flex items-center justify-between px-2">
@@ -215,69 +177,88 @@ export default function BulkScheduler({ book, units, onRefresh }) {
       {/* Horizontal calendar grid */}
       <div className="grid grid-cols-5 gap-2">
         {weekDays.map(day => {
-          const ds = format(day, "yyyy-MM-dd");
-          const data = dayData[ds] || { pages: "", notes: "" };
-          const isEditing = editingDay === ds;
+           const ds = format(day, "yyyy-MM-dd");
+           const data = dayData[ds] || { pages: "", notes: "", unit_id: "" };
+           const dayUnitColor = getUnitColor(data.unit_id);
+           const isEditing = editingDay === ds;
 
-          return (
-            <div
-              key={ds}
-              className={`border rounded-lg p-2 transition-colors ${
-                isEditing ? "border-2" : data.pages ? "border-2" : "border bg-white hover:bg-muted/30"
-              }`}
-              style={{
-                borderColor: isEditing || data.pages ? selectedUnitColor : "inherit",
-                backgroundColor: isEditing || data.pages ? selectedUnitColor + "08" : "inherit",
-              }}
-            >
-              {/* Day header */}
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-semibold text-foreground">{format(day, "EEE")}</span>
-                <span className="text-[10px] text-muted-foreground">{format(day, "d")}</span>
-                {data.pages && !isEditing && (
-                  <button
-                    onClick={() => removeDay(ds)}
-                    className="text-muted-foreground hover:text-red-500 p-0.5 -mr-1"
-                  >
-                    <Trash2 className="w-2.5 h-2.5" />
-                  </button>
-                )}
-              </div>
+           return (
+             <div
+               key={ds}
+               className={`border rounded-lg p-2 transition-colors ${
+                 isEditing ? "border-2" : data.pages ? "border-2" : "border bg-white hover:bg-muted/30"
+               }`}
+               style={{
+                 borderColor: isEditing || data.pages ? dayUnitColor : "inherit",
+                 backgroundColor: isEditing || data.pages ? dayUnitColor + "08" : "inherit",
+               }}
+             >
+               {/* Day header */}
+               <div className="flex items-center justify-between mb-2">
+                 <span className="text-[10px] font-semibold text-foreground">{format(day, "EEE")}</span>
+                 <span className="text-[10px] text-muted-foreground">{format(day, "d")}</span>
+                 {data.pages && !isEditing && (
+                   <button
+                     onClick={() => removeDay(ds)}
+                     className="text-muted-foreground hover:text-red-500 p-0.5 -mr-1"
+                   >
+                     <Trash2 className="w-2.5 h-2.5" />
+                   </button>
+                 )}
+               </div>
 
-              {/* Pages input */}
-              <div className="mb-2">
-                <input
-                  value={data.pages}
-                  onChange={e => updateDayData(ds, "pages", e.target.value)}
-                  onFocus={() => setEditingDay(ds)}
-                  onBlur={() => setEditingDay(null)}
-                  placeholder="e.g. 1-3"
-                  className={`w-full text-[10px] border rounded px-1.5 py-1 outline-none focus:border-2 ${
-                    data.pages ? "bg-white" : "border-border"
-                  }`}
-                  style={{
-                    borderColor: data.pages ? selectedUnitColor : "inherit",
-                  }}
-                />
-              </div>
+               {/* Unit selector dropdown */}
+               {units.length > 0 && (
+                 <div className="mb-2">
+                   <select
+                     value={data.unit_id || ""}
+                     onChange={e => updateDayData(ds, "unit_id", e.target.value)}
+                     className="w-full text-[9px] border rounded px-1.5 py-1 outline-none focus:border-2"
+                     style={{
+                       borderColor: data.unit_id ? dayUnitColor : "inherit",
+                       backgroundColor: data.unit_id ? dayUnitColor + "12" : "inherit",
+                     }}
+                   >
+                     <option value="">No unit</option>
+                     {units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                   </select>
+                 </div>
+               )}
 
-              {/* Notes input */}
-              <div>
-                <textarea
-                  value={data.notes}
-                  onChange={e => updateDayData(ds, "notes", e.target.value)}
-                  onFocus={() => setEditingDay(ds)}
-                  onBlur={() => setEditingDay(null)}
-                  placeholder="Video, resource, note..."
-                  className="w-full text-[10px] border rounded px-1.5 py-1 resize-none h-12 outline-none focus:border-2"
-                  style={{
-                    borderColor: data.notes ? selectedUnitColor : "inherit",
-                  }}
-                />
-              </div>
-            </div>
-          );
-        })}
+               {/* Pages input */}
+               <div className="mb-2">
+                 <input
+                   value={data.pages}
+                   onChange={e => updateDayData(ds, "pages", e.target.value)}
+                   onFocus={() => setEditingDay(ds)}
+                   onBlur={() => setEditingDay(null)}
+                   placeholder="e.g. 1-3"
+                   className={`w-full text-[10px] border rounded px-1.5 py-1 outline-none focus:border-2 ${
+                     data.pages ? "bg-white" : "border-border"
+                   }`}
+                   style={{
+                     borderColor: data.pages ? dayUnitColor : "inherit",
+                   }}
+                 />
+               </div>
+
+               {/* Notes input */}
+               <div>
+                 <textarea
+                   value={data.notes}
+                   onChange={e => updateDayData(ds, "notes", e.target.value)}
+                   onFocus={() => setEditingDay(ds)}
+                   onBlur={() => setEditingDay(null)}
+                   placeholder="Video, resource, note..."
+                   className="w-full text-[10px] border rounded px-1.5 py-1 resize-none h-12 outline-none focus:border-2"
+                   style={{
+                     borderColor: data.notes ? dayUnitColor : "inherit",
+                   }}
+                 />
+               </div>
+             </div>
+           );
+         })}
       </div>
 
       {/* Create button */}
