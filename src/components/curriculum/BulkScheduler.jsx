@@ -151,22 +151,55 @@ export default function BulkScheduler({ book, units, onRefresh }) {
     return <div className="text-sm text-muted-foreground py-4">Loading schedule...</div>;
   }
 
+  // Assign colors to units for visual distinction
+  const unitColors = {};
+  const colors = ["#E94B3C", "#2E7D32", "#0D47A1", "#F57C00", "#6A1B9A", "#00796B", "#C62828"];
+  units.forEach((u, i) => {
+    unitColors[u.id] = colors[i % colors.length];
+  });
+  const selectedUnitColor = unitId && unitColors[unitId] ? unitColors[unitId] : "#534AB7";
+
   return (
     <div className="space-y-4">
       <div className="text-xs text-muted-foreground">Assign pages and notes across the week—add videos, resources, or reminders per day.</div>
 
       {/* Unit selector */}
-      <div>
-        <label className="text-xs text-muted-foreground block mb-1">Link to unit (optional)</label>
-        <select
-          value={unitId}
-          onChange={e => setUnitId(e.target.value)}
-          className="w-full text-xs border border-border rounded px-2.5 py-1.5 outline-none focus:border-[#534AB7]"
-        >
-          <option value="">None</option>
-          {units.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-        </select>
-      </div>
+      {units.length > 0 && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Link to unit:</span>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => setUnitId("")}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                !unitId
+                  ? "bg-[#534AB7] text-white border-[#534AB7]"
+                  : "border-border text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              None
+            </button>
+            {units.map(u => (
+              <button
+                key={u.id}
+                onClick={() => setUnitId(u.id)}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-all truncate max-w-[150px] ${
+                  unitId === u.id
+                    ? "text-white border"
+                    : "border-border text-muted-foreground hover:opacity-80"
+                }`}
+                style={{
+                  backgroundColor: unitId === u.id ? unitColors[u.id] : "transparent",
+                  borderColor: unitId === u.id ? unitColors[u.id] : "inherit",
+                  color: unitId === u.id ? "white" : "inherit",
+                }}
+                title={u.name}
+              >
+                {u.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Week navigation */}
       <div className="flex items-center justify-between px-2">
@@ -190,8 +223,12 @@ export default function BulkScheduler({ book, units, onRefresh }) {
             <div
               key={ds}
               className={`border rounded-lg p-2 transition-colors ${
-                isEditing ? "bg-[#EEEDFE] border-[#534AB7]" : data.pages ? "bg-[#EEEDFE] border-[#534AB7]/30" : "bg-white hover:bg-muted/30"
+                isEditing ? "border-2" : data.pages ? "border-2" : "border bg-white hover:bg-muted/30"
               }`}
+              style={{
+                borderColor: isEditing || data.pages ? selectedUnitColor : "inherit",
+                backgroundColor: isEditing || data.pages ? selectedUnitColor + "08" : "inherit",
+              }}
             >
               {/* Day header */}
               <div className="flex items-center justify-between mb-2">
@@ -214,10 +251,13 @@ export default function BulkScheduler({ book, units, onRefresh }) {
                   onChange={e => updateDayData(ds, "pages", e.target.value)}
                   onFocus={() => setEditingDay(ds)}
                   onBlur={() => setEditingDay(null)}
-                  placeholder="Pages"
-                  className={`w-full text-[10px] border rounded px-1.5 py-1 outline-none focus:border-[#534AB7] ${
-                    data.pages ? "bg-white border-[#534AB7]" : "border-border"
+                  placeholder="e.g. 1-3"
+                  className={`w-full text-[10px] border rounded px-1.5 py-1 outline-none focus:border-2 ${
+                    data.pages ? "bg-white" : "border-border"
                   }`}
+                  style={{
+                    borderColor: data.pages ? selectedUnitColor : "inherit",
+                  }}
                 />
               </div>
 
@@ -228,8 +268,11 @@ export default function BulkScheduler({ book, units, onRefresh }) {
                   onChange={e => updateDayData(ds, "notes", e.target.value)}
                   onFocus={() => setEditingDay(ds)}
                   onBlur={() => setEditingDay(null)}
-                  placeholder="Notes, video, resource..."
-                  className="w-full text-[10px] border border-border rounded px-1.5 py-1 resize-none h-12 outline-none focus:border-[#534AB7]"
+                  placeholder="Video, resource, note..."
+                  className="w-full text-[10px] border rounded px-1.5 py-1 resize-none h-12 outline-none focus:border-2"
+                  style={{
+                    borderColor: data.notes ? selectedUnitColor : "inherit",
+                  }}
                 />
               </div>
             </div>
