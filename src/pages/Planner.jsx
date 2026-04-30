@@ -10,6 +10,8 @@ const KIDS = ["Tigerlily", "Rowen", "Both"];
 
 export default function Planner() {
   const { activeUser } = useUser();
+  const [tab, setTab] = useState("daily"); // "daily" | "weekly"
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [weekRef, setWeekRef] = useState(new Date());
   const [items, setItems] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -31,6 +33,7 @@ export default function Planner() {
   };
 
   const itemsForDay = (dateStr) => items.filter(i => i.date === dateStr);
+  const itemsByKid = (dateStr, kid) => itemsForDay(dateStr).filter(i => i.kid === kid || i.kid === "Both");
 
   const openForm = (dateStr) => {
     setFormDay(dateStr);
@@ -71,34 +74,145 @@ export default function Planner() {
           <h1 className="text-xl font-semibold text-foreground">Planner</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setWeekRef(w => subWeeks(w, 1))} className="p-2 hover:bg-muted rounded-md"><ChevronLeft className="w-4 h-4" /></button>
-          <span className="text-sm font-medium text-foreground min-w-[180px] text-center">
-            {format(weekStart, "MMM d")} – {format(weekEnd, "MMM d, yyyy")}
-          </span>
-          <button onClick={() => setWeekRef(w => addWeeks(w, 1))} className="p-2 hover:bg-muted rounded-md"><ChevronRight className="w-4 h-4" /></button>
+          {tab === "weekly" ? (
+            <>
+              <button onClick={() => setWeekRef(w => subWeeks(w, 1))} className="p-2 hover:bg-muted rounded-md"><ChevronLeft className="w-4 h-4" /></button>
+              <span className="text-sm font-medium text-foreground min-w-[180px] text-center">
+                {format(weekStart, "MMM d")} – {format(weekEnd, "MMM d, yyyy")}
+              </span>
+              <button onClick={() => setWeekRef(w => addWeeks(w, 1))} className="p-2 hover:bg-muted rounded-md"><ChevronRight className="w-4 h-4" /></button>
+            </>
+          ) : (
+            <>
+              <button onClick={() => setSelectedDate(d => format(new Date(d).getTime() - 86400000, "yyyy-MM-dd"))} className="p-2 hover:bg-muted rounded-md"><ChevronLeft className="w-4 h-4" /></button>
+              <span className="text-sm font-medium text-foreground min-w-[180px] text-center">
+                {format(new Date(selectedDate + "T12:00:00"), "EEEE, MMMM d, yyyy")}
+              </span>
+              <button onClick={() => setSelectedDate(d => format(new Date(d).getTime() + 86400000, "yyyy-MM-dd"))} className="p-2 hover:bg-muted rounded-md"><ChevronRight className="w-4 h-4" /></button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-3 gap-3 mb-5">
-        <div className="bg-white border border-border rounded-md px-4 py-3">
-          <div className="text-xs text-muted-foreground">Week of</div>
-          <div className="text-sm font-semibold mt-0.5">{format(weekStart, "MMMM d")}</div>
-        </div>
-        <div className="bg-white border border-border rounded-md px-4 py-3">
-          <div className="text-xs text-muted-foreground">Items planned</div>
-          <div className="text-sm font-semibold mt-0.5">
-            {weekDays.reduce((sum, d) => sum + itemsForDay(format(d, "yyyy-MM-dd")).length, 0)}
+      {/* Tabs */}
+      <div className="flex border-b border-border mb-4">
+        {["daily", "weekly"].map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`text-sm px-4 py-2.5 border-b-2 transition-colors -mb-px capitalize ${
+              tab === t ? "border-[#534AB7] text-[#534AB7] font-medium" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t} view
+          </button>
+        ))}
+      </div>
+
+      {/* Daily view */}
+      {tab === "daily" && (
+        <div className="space-y-3">
+          {/* Tigerlily */}
+          <div className="bg-white border border-border rounded-md overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-[#EAF3DE]">
+              <span className="text-sm font-semibold text-[#3B6D11]">Tigerlily</span>
+              <span className="text-xs text-[#3B6D11]">{itemsByKid(selectedDate, "Tigerlily").length} assignment{itemsByKid(selectedDate, "Tigerlily").length !== 1 ? "s" : ""}</span>
+            </div>
+            <div className="divide-y divide-border">
+              {itemsByKid(selectedDate, "Tigerlily").length === 0 && (
+                <p className="text-xs text-muted-foreground px-4 py-3">No assignments for today.</p>
+              )}
+              {itemsByKid(selectedDate, "Tigerlily").map(item => (
+                <div key={item.id} className="flex items-center gap-3 px-4 py-2.5 group">
+                  <div className="w-1 h-8 rounded-full shrink-0" style={{ backgroundColor: SUBJECT_COLORS[item.subject] || "#534AB7" }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-foreground">{item.title}</div>
+                    {item.detail && <div className="text-xs text-muted-foreground">{item.detail}</div>}
+                    <div className="text-[10px] text-muted-foreground mt-0.5">{item.subject}</div>
+                  </div>
+                  {item.sub_directions?.length > 0 && (
+                    <div className="text-[10px] text-muted-foreground">{item.sub_directions.length} steps</div>
+                  )}
+                  <button
+                    onClick={() => removeItem(item.id)}
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500 transition-opacity"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => { setFormDay(selectedDate); setForm(f => ({ ...f, kid: "Tigerlily" })); setShowForm(true); }}
+                className="w-full text-xs text-muted-foreground px-4 py-2.5 hover:bg-muted transition-colors flex items-center justify-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> Add assignment
+              </button>
+            </div>
+          </div>
+
+          {/* Rowen */}
+          <div className="bg-white border border-border rounded-md overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-[#E6F1FB]">
+              <span className="text-sm font-semibold text-[#0C447C]">Rowen</span>
+              <span className="text-xs text-[#0C447C]">{itemsByKid(selectedDate, "Rowen").length} assignment{itemsByKid(selectedDate, "Rowen").length !== 1 ? "s" : ""}</span>
+            </div>
+            <div className="divide-y divide-border">
+              {itemsByKid(selectedDate, "Rowen").length === 0 && (
+                <p className="text-xs text-muted-foreground px-4 py-3">No assignments for today.</p>
+              )}
+              {itemsByKid(selectedDate, "Rowen").map(item => (
+                <div key={item.id} className="flex items-center gap-3 px-4 py-2.5 group">
+                  <div className="w-1 h-8 rounded-full shrink-0" style={{ backgroundColor: SUBJECT_COLORS[item.subject] || "#534AB7" }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-foreground">{item.title}</div>
+                    {item.detail && <div className="text-xs text-muted-foreground">{item.detail}</div>}
+                    <div className="text-[10px] text-muted-foreground mt-0.5">{item.subject}</div>
+                  </div>
+                  {item.sub_directions?.length > 0 && (
+                    <div className="text-[10px] text-muted-foreground">{item.sub_directions.length} steps</div>
+                  )}
+                  <button
+                    onClick={() => removeItem(item.id)}
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-500 transition-opacity"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => { setFormDay(selectedDate); setForm(f => ({ ...f, kid: "Rowen" })); setShowForm(true); }}
+                className="w-full text-xs text-muted-foreground px-4 py-2.5 hover:bg-muted transition-colors flex items-center justify-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> Add assignment
+              </button>
+            </div>
           </div>
         </div>
-        <div className="bg-white border border-border rounded-md px-4 py-3">
-          <div className="text-xs text-muted-foreground">Handoff notes</div>
-          <div className="text-sm font-semibold mt-0.5">{handoffCount}</div>
-        </div>
-      </div>
+      )}
 
-      {/* Week grid */}
-      <div className="grid grid-cols-5 gap-3">
+      {/* Weekly view */}
+      {tab === "weekly" && (
+        <>
+          {/* Stat cards */}
+          <div className="grid grid-cols-3 gap-3 mb-5">
+            <div className="bg-white border border-border rounded-md px-4 py-3">
+              <div className="text-xs text-muted-foreground">Week of</div>
+              <div className="text-sm font-semibold mt-0.5">{format(weekStart, "MMMM d")}</div>
+            </div>
+            <div className="bg-white border border-border rounded-md px-4 py-3">
+              <div className="text-xs text-muted-foreground">Items planned</div>
+              <div className="text-sm font-semibold mt-0.5">
+                {weekDays.reduce((sum, d) => sum + itemsForDay(format(d, "yyyy-MM-dd")).length, 0)}
+              </div>
+            </div>
+            <div className="bg-white border border-border rounded-md px-4 py-3">
+              <div className="text-xs text-muted-foreground">Handoff notes</div>
+              <div className="text-sm font-semibold mt-0.5">{handoffCount}</div>
+            </div>
+          </div>
+
+          {/* Week grid */}
+          <div className="grid grid-cols-5 gap-3">
         {weekDays.map(day => {
           const ds = format(day, "yyyy-MM-dd");
           const dayItems = itemsForDay(ds);
@@ -159,17 +273,19 @@ export default function Planner() {
             </div>
           );
         })}
-      </div>
+        </div>
 
-      {/* Color legend */}
-      <div className="flex flex-wrap gap-4 mt-5 px-1">
+        {/* Color legend */}
+        <div className="flex flex-wrap gap-4 mt-5 px-1">
         {Object.entries(SUBJECT_COLORS).map(([subj, color]) => (
           <div key={subj} className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: color }} />
             <span className="text-xs text-muted-foreground">{subj}</span>
           </div>
         ))}
-      </div>
+        </div>
+        </>
+        )}
 
       {/* Add item form modal */}
       {showForm && (
