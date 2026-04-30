@@ -17,7 +17,7 @@ export default function Curriculum() {
   const loadAll = async () => {
     setLoading(true);
     const [bks, logs] = await Promise.all([
-      base44.entities.CurriculumBook.filter({ is_archived: false }, "-created_date", 100),
+      base44.entities.CurriculumBook.list("-created_date", 100),
       base44.entities.LogEntry.list("-date", 500),
     ]);
     setBooks(bks);
