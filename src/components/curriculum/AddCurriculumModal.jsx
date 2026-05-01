@@ -1,11 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
+import db from "@/lib/supabaseClient";
 import { SUBJECT_COLORS } from "@/lib/constants";
 import { X, Upload, Sparkles, Plus, Trash2, Settings } from "lucide-react";
 import TagSelector from "@/components/tags/TagSelector";
 import TagManagementModal from "@/components/tags/TagManagementModal";
 
-const SUBJECTS = Object.keys(SUBJECT_COLORS);
 const KIDS = [
   { value: "Tigerlily", label: "Tigerlily" },
   { value: "Rowen", label: "Rowen" },
@@ -16,12 +16,25 @@ const EMPTY_ROW = () => ({ name: "", pages: "" });
 
 export default function AddCurriculumModal({ onClose, onAdded }) {
   const [tab, setTab] = useState("scan"); // "scan" | "paste" | "manual"
+  const [subjects, setSubjects] = useState([]);
 
   // Shared fields
   const [name, setName] = useState("");
   const [kid, setKid] = useState("Tigerlily");
-  const [subject, setSubject] = useState("Math");
+  const [subject, setSubject] = useState("");
   const [grade, setGrade] = useState("");
+
+  useEffect(() => {
+    loadSubjects();
+  }, []);
+
+  const loadSubjects = async () => {
+    const cats = await db.subjectCategories.list();
+    setSubjects(cats);
+    if (cats.length > 0) {
+      setSubject(cats[0].name);
+    }
+  };
   const [saving, setSaving] = useState(false);
 
   // AI scan state
@@ -89,7 +102,7 @@ Return ONLY a JSON object. Do not include markdown.`,
       }
     });
     setName(result.title || "");
-    if (result.subject && SUBJECTS.includes(result.subject)) setSubject(result.subject);
+    if (result.subject && subjects.some(s => s.name === result.subject)) setSubject(result.subject);
     setGrade(result.grade_level || "");
     setScannedUnits((result.units || []).map((u, i) => ({ ...u, id: `u-${Date.now()}-${i}` })));
     setScanning(false);
@@ -457,7 +470,7 @@ Return ONLY a JSON object with a "units" array where each item is a separate cha
                   onChange={e => setSubject(e.target.value)}
                   className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:border-[#534AB7]"
                 >
-                  {SUBJECTS.map(s => <option key={s}>{s}</option>)}
+                  {subjects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
                 </select>
               </div>
               <div>
