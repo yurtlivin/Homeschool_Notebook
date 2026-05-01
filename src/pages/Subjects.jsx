@@ -7,9 +7,14 @@ export default function Subjects() {
   const [selectedCluster, setSelectedCluster] = useState(null);
   const [clusters, setClusters] = useState([]);
 
-  useEffect(() => {
-    loadClusters().then(setClusters);
-  }, []);
+ useEffect(() => {
+  loadClusters().then(data => {
+    console.log("clusters loaded:", data);
+    setClusters(data);
+  }).catch(err => {
+    console.error("cluster load failed:", err);
+  });
+}, []);
 
   if (selectedCluster) {
     return (
