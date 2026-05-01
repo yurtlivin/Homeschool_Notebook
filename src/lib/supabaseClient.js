@@ -303,6 +303,7 @@ export default {
   tags,
   lessonTags,
   lessonBooks,
+  bookTags,
   media,
   mediaTags,
 };
