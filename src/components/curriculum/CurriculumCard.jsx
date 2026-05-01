@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { SUBJECT_COLORS } from "@/lib/constants";
 import { Check, ChevronDown, ChevronUp, Plus, Camera, Trash2 } from "lucide-react";
 import UnitRow from "./UnitRow";
+import TagBadges from "@/components/tags/TagBadges";
 
 const TABS = ["Units", "Notes", "Field trips"];
 
@@ -181,6 +182,11 @@ export default function CurriculumCard({ book, logEntries, onRefresh }) {
               ))}
             </div>
           )}
+
+          {/* Tags */}
+          <div className="mt-2">
+            <TagBadges tagIds={book.tag_ids || []} limit={2} />
+          </div>
         </div>
       </div>
 

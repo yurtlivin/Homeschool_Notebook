@@ -178,7 +178,7 @@ export const lessonTags = {
   },
 };
 
-// ── LESSON_BOOKS (junction: link lessons to books/curriculum) ──
+// ── LESSON_BOOKS (junction: link lessons to books/curriculum & books to tags) ──
 export const lessonBooks = {
   list: async () => {
     const res = await base44.integrations.custom.call(RELATIONS, 'get:/lesson_books', {});
@@ -199,6 +199,32 @@ export const lessonBooks = {
   delete: async (lessonId, bookId) => {
     const res = await base44.integrations.custom.call(RELATIONS, 'delete:/lesson_books', {
       payload: { lesson_id: lessonId, book_id: bookId }
+    });
+    return res.success;
+  },
+};
+
+// ── BOOK_TAGS (junction: link books to tags) ──
+export const bookTags = {
+  list: async () => {
+    const res = await base44.integrations.custom.call(RELATIONS, 'get:/book_tags', {});
+    return res.success ? res.data : [];
+  },
+  filter: async (query) => {
+    const res = await base44.integrations.custom.call(RELATIONS, 'get:/book_tags', {
+      queryParams: query
+    });
+    return res.success ? res.data : [];
+  },
+  create: async (data) => {
+    const res = await base44.integrations.custom.call(RELATIONS, 'post:/book_tags', {
+      payload: data
+    });
+    return res.success ? res.data : null;
+  },
+  delete: async (bookId, tagId) => {
+    const res = await base44.integrations.custom.call(RELATIONS, 'delete:/book_tags', {
+      payload: { book_id: bookId, tag_id: tagId }
     });
     return res.success;
   },

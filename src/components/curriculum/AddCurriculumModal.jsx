@@ -1,7 +1,9 @@
 import { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { SUBJECT_COLORS } from "@/lib/constants";
-import { X, Upload, Sparkles, Plus, Trash2 } from "lucide-react";
+import { X, Upload, Sparkles, Plus, Trash2, Settings } from "lucide-react";
+import TagSelector from "@/components/tags/TagSelector";
+import TagManagementModal from "@/components/tags/TagManagementModal";
 
 const SUBJECTS = Object.keys(SUBJECT_COLORS);
 const KIDS = [
@@ -37,6 +39,10 @@ export default function AddCurriculumModal({ onClose, onAdded }) {
   const [pastedText, setPastedText] = useState("");
   const [parsingText, setParsingText] = useState(false);
   const [parsedUnits, setParsedUnits] = useState([]);
+
+  // Tags state
+  const [selectedTagIds, setSelectedTagIds] = useState([]);
+  const [showTagManagement, setShowTagManagement] = useState(false);
 
   const handleImagePick = (e) => {
     const file = e.target.files?.[0];
@@ -165,7 +171,25 @@ Return ONLY a JSON object with a "units" array where each item is a separate cha
         resources: [],
       }));
     }
-    await base44.entities.CurriculumBook.create({ name: name.trim(), kid, subject, grade_level: grade.trim(), units, ...(tab === "scan" && scanFileUrl ? { cover_image: scanFileUrl } : {}) });
+
+    // Create book first
+    const book = await base44.entities.CurriculumBook.create({
+      name: name.trim(),
+      kid,
+      subject,
+      grade_level: grade.trim(),
+      units,
+      ...(tab === "scan" && scanFileUrl ? { cover_image: scanFileUrl } : {})
+    });
+
+    // Link tags if any selected
+    if (book && selectedTagIds.length > 0) {
+      const db = (await import("@/lib/supabaseClient")).default;
+      await Promise.all(selectedTagIds.map(tagId =>
+        db.bookTags.create({ book_id: book.id, tag_id: tagId })
+      ));
+    }
+
     setSaving(false);
     onAdded();
     onClose();
@@ -393,6 +417,24 @@ Return ONLY a JSON object with a "units" array where each item is a separate cha
                 className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:border-[#534AB7]"
               />
             </div>
+
+            {/* Tags */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs text-muted-foreground block">Tags</label>
+                <button
+                  onClick={() => setShowTagManagement(true)}
+                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                >
+                  <Settings className="w-3 h-3" /> Manage
+                </button>
+              </div>
+              <TagSelector
+                selectedTagIds={selectedTagIds}
+                onTagsChange={setSelectedTagIds}
+                onOpenManagement={() => setShowTagManagement(true)}
+              />
+            </div>
             <div>
               <label className="text-xs text-muted-foreground block mb-1">For</label>
               <div className="flex gap-2">
@@ -442,7 +484,10 @@ Return ONLY a JSON object with a "units" array where each item is a separate cha
             {saving ? "Saving..." : "Add curriculum"}
           </button>
         </div>
-      </div>
-    </div>
-  );
-}
+        </div>
+
+        {/* Tag Management Modal */}
+        {showTagManagement && <TagManagementModal onClose={() => setShowTagManagement(false)} />}
+        </div>
+        );
+        }
