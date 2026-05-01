@@ -20,11 +20,10 @@ export default function CurriculumPlanner() {
     setLoading(true);
     const bks = await base44.entities.CurriculumBook.filter({ is_archived: viewArchived }, "-created_date", 100);
     
-    // Enrich books with tag_ids
-    const bookTags = await db.bookTags.list();
+    // Map cluster_tags to tag_ids
     const enrichedBooks = bks.map(b => ({
       ...b,
-      tag_ids: bookTags.filter(bt => bt.book_id === b.id).map(bt => bt.tag_id)
+      tag_ids: b.cluster_tags || []
     }));
     
     setBooks(enrichedBooks);
