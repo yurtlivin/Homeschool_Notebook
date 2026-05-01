@@ -1,10 +1,15 @@
-import { useState } from "react";
-import { CLUSTERS } from "@/lib/subjectsClusters";
+import { useState, useEffect } from "react";
+import { loadClusters } from "@/lib/subjectsClusters";
 import ClusterTile from "@/components/subjects/ClusterTile";
 import SubjectClusterDetail from "@/components/subjects/SubjectClusterDetail";
 
 export default function Subjects() {
   const [selectedCluster, setSelectedCluster] = useState(null);
+  const [clusters, setClusters] = useState([]);
+
+  useEffect(() => {
+    loadClusters().then(setClusters);
+  }, []);
 
   if (selectedCluster) {
     return (
@@ -23,10 +28,8 @@ export default function Subjects() {
         <h1 className="text-2xl font-semibold text-foreground mb-1">Subjects</h1>
         <p className="text-sm text-muted-foreground">Explore learning across 7 skill clusters</p>
       </div>
-
-      {/* Cluster tiles grid */}
       <div className="grid grid-cols-4 gap-4 max-w-6xl">
-        {CLUSTERS.map(cluster => (
+        {clusters.map(cluster => (
           <ClusterTile
             key={cluster.id}
             cluster={cluster}
