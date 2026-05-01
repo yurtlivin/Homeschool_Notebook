@@ -4,6 +4,8 @@ import { Plus, Archive, RotateCcw, X } from "lucide-react";
 import { SUBJECT_COLORS } from "@/lib/constants";
 import AddCurriculumModal from "@/components/curriculum/AddCurriculumModal";
 import BookDetailModal from "@/components/curriculum/BookDetailModal";
+import TagBadges from "@/components/tags/TagBadges";
+import db from "@/lib/supabaseClient";
 
 export default function CurriculumPlanner() {
   const [books, setBooks] = useState([]);
@@ -17,9 +19,17 @@ export default function CurriculumPlanner() {
   const loadBooks = async () => {
     setLoading(true);
     const bks = await base44.entities.CurriculumBook.filter({ is_archived: viewArchived }, "-created_date", 100);
-    setBooks(bks);
+    
+    // Enrich books with tag_ids
+    const bookTags = await db.bookTags.list();
+    const enrichedBooks = bks.map(b => ({
+      ...b,
+      tag_ids: bookTags.filter(bt => bt.book_id === b.id).map(bt => bt.tag_id)
+    }));
+    
+    setBooks(enrichedBooks);
     if (selectedBook) {
-      const updated = bks.find(b => b.id === selectedBook.id);
+      const updated = enrichedBooks.find(b => b.id === selectedBook.id);
       setSelectedBook(updated || null);
     }
     setLoading(false);
@@ -179,14 +189,21 @@ function BookCard({ book, onSelect }) {
           </div>
         </div>
 
+        {/* Tags */}
+        {book.tag_ids && book.tag_ids.length > 0 && (
+          <div className="mt-3">
+            <TagBadges tagIds={book.tag_ids} limit={2} />
+          </div>
+        )}
+
         {/* Next up */}
         {nextUnit && (
-          <div className="text-[10px] text-muted-foreground truncate">
+          <div className="text-[10px] text-muted-foreground truncate mt-2">
             Next: {nextUnit.name}
           </div>
         )}
         {!nextUnit && units.length > 0 && (
-          <div className="text-[10px] text-green-600 font-medium">✓ All units complete</div>
+          <div className="text-[10px] text-green-600 font-medium mt-2">✓ All units complete</div>
         )}
       </div>
     </button>

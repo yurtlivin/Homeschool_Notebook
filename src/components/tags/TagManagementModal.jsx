@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
 import db from "@/lib/supabaseClient";
 import { X, Plus, Trash2, Pencil, Check } from "lucide-react";
 
@@ -29,32 +30,51 @@ export default function TagManagementModal({ onClose }) {
     const tagName = newTagNames[categoryId]?.trim();
     if (!tagName) return;
 
-    const newTag = await db.tags.create({
-      name: tagName,
-      category_id: categoryId,
-    });
+    try {
+      const newTag = await db.tags.create({
+        name: tagName,
+        category_id: categoryId,
+      });
 
-    if (newTag) {
-      setTags([...tags, newTag]);
-      setNewTagNames(prev => ({ ...prev, [categoryId]: "" }));
+      if (newTag) {
+        setTags([...tags, newTag]);
+        setNewTagNames(prev => ({ ...prev, [categoryId]: "" }));
+      }
+    } catch (error) {
+      console.error("Error creating tag:", error);
     }
   };
 
   const updateTagName = async (tagId, newName) => {
     if (!newName.trim()) return;
     
-    const updated = await db.tags.update(tagId, { name: newName.trim() });
-    if (updated) {
-      setTags(tags.map(t => t.id === tagId ? updated : t));
-      setEditingTagId(null);
-      setEditingTagName("");
+    try {
+      // Since the API may not support PATCH, try creating the update via custom integration
+      const res = await base44.integrations.custom.call('homeschool-core', 'patch:/tags', {
+        payload: { id: tagId, name: newName.trim() }
+      });
+      
+      if (res.success) {
+        setTags(tags.map(t => t.id === tagId ? { ...t, name: newName.trim() } : t));
+        setEditingTagId(null);
+        setEditingTagName("");
+      }
+    } catch (error) {
+      console.error("Error updating tag:", error);
     }
   };
 
   const deleteTag = async (tagId) => {
-    const success = await db.tags.delete(tagId);
-    if (success) {
-      setTags(tags.filter(t => t.id !== tagId));
+    try {
+      const res = await base44.integrations.custom.call('homeschool-core', 'delete:/tags', {
+        payload: { id: tagId }
+      });
+      
+      if (res.success) {
+        setTags(tags.filter(t => t.id !== tagId));
+      }
+    } catch (error) {
+      console.error("Error deleting tag:", error);
     }
   };
 

@@ -3,27 +3,23 @@ import db from "@/lib/supabaseClient";
 
 export default function TagBadges({ tagIds, limit = 3 }) {
   const [tags, setTags] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadTags();
-  }, [tagIds]);
+  }, [tagIds?.join(",")]);
 
   const loadTags = async () => {
     if (!tagIds || tagIds.length === 0) {
       setTags([]);
-      setLoading(false);
       return;
     }
 
-    setLoading(true);
     const allTags = await db.tags.list();
     const filtered = allTags.filter(t => tagIds.includes(t.id));
     setTags(filtered);
-    setLoading(false);
   };
 
-  if (loading || tags.length === 0) return null;
+  if (tags.length === 0) return null;
 
   const displayTags = tags.slice(0, limit);
   const remaining = tags.length - limit;

@@ -36,16 +36,20 @@ export default function TagSelector({ selectedTagIds, onTagsChange, onOpenManage
   const createNewTag = async () => {
     if (!newTagName.trim() || !newTagCategory) return;
 
-    const created = await db.tags.create({
-      name: newTagName.trim(),
-      category_id: newTagCategory,
-    });
+    try {
+      const created = await db.tags.create({
+        name: newTagName.trim(),
+        category_id: newTagCategory,
+      });
 
-    if (created) {
-      setAllTags([...allTags, created]);
-      onTagsChange([...selectedTagIds, created.id]);
-      setNewTagName("");
-      setShowNewTagForm(false);
+      if (created) {
+        setAllTags([...allTags, created]);
+        onTagsChange([...selectedTagIds, created.id]);
+        setNewTagName("");
+        setShowNewTagForm(false);
+      }
+    } catch (error) {
+      console.error("Error creating tag:", error);
     }
   };
 
