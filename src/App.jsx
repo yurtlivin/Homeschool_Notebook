@@ -14,6 +14,7 @@ import Books from '@/pages/Books';
 import Portfolio from '@/pages/Portfolio';
 import Calendar from '@/pages/Calendar';
 import LessonPreview from '@/pages/LessonPreview';
+import Subjects from '@/pages/Subjects';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -46,6 +47,7 @@ const AuthenticatedApp = () => {
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/lesson-preview" element={<LessonPreview />} />
+          <Route path="/subjects" element={<Subjects />} />
         </Route>
         <Route path="*" element={<PageNotFound />} />
       </Routes>

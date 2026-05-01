@@ -1,0 +1,24 @@
+{
+  "name": "ClusterNotes",
+  "type": "object",
+  "properties": {
+    "cluster_name": {
+      "type": "string"
+    },
+    "kid": {
+      "type": "string",
+      "enum": [
+        "Tigerlily",
+        "Rowen",
+        "Both"
+      ]
+    },
+    "notes_content": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "cluster_name",
+    "kid"
+  ]
+}

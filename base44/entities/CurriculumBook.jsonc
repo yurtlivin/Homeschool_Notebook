@@ -53,6 +53,12 @@
           "notes": {
             "type": "string"
           },
+          "cluster_tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "resources": {
             "type": "array",
             "items": {

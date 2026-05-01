@@ -49,6 +49,18 @@
     "is_handoff_note": {
       "type": "boolean",
       "default": false
+    },
+    "cluster_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "photo_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [

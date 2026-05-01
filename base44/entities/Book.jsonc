@@ -39,6 +39,12 @@
     "date_added": {
       "type": "string",
       "format": "date"
+    },
+    "cluster_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [

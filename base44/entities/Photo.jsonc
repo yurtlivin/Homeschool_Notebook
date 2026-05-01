@@ -1,0 +1,57 @@
+{
+  "name": "Photo",
+  "type": "object",
+  "properties": {
+    "image_url": {
+      "type": "string"
+    },
+    "date_uploaded": {
+      "type": "string",
+      "format": "date"
+    },
+    "cluster_tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "child_tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Tigerlily",
+          "Rowen",
+          "Both"
+        ]
+      }
+    },
+    "caption": {
+      "type": "string"
+    },
+    "linked_log_entries": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "linked_curriculum_units": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "book_id": {
+            "type": "string"
+          },
+          "unit_id": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "image_url",
+    "date_uploaded"
+  ]
+}
