@@ -1,8 +1,6 @@
 import { useState, useRef } from "react";
-import { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { SUBJECT_COLORS } from "@/lib/constants";
-import { CLUSTERS } from "@/lib/subjectsClusters";
 import { Camera, Plus, X, Trash2, Check, Pencil, MapPin, Sparkles, Upload, Save, Calendar } from "lucide-react";
 import UnitRow from "./UnitRow";
 import BookMiniCalendar from "./BookMiniCalendar";
@@ -12,7 +10,7 @@ import BulkScheduler from "./BulkScheduler";
 import LessonDetailModal from "./LessonDetailModal";
 
 const TABS = ["Units", "Photos", "Field Trips", "Notes", "Schedule", "Plan"];
-const SUBJECTS = CLUSTERS.map(c => c.name);
+const SUBJECTS = Object.keys(SUBJECT_COLORS);
 const KIDS = ["Tigerlily", "Rowen", "Both"];
 
 export default function BookDetailPanel({ book, onRefresh, onClose }) {
@@ -82,13 +80,11 @@ export default function BookDetailPanel({ book, onRefresh, onClose }) {
 
   const saveInfo = async () => {
     setSavingInfo(true);
-    const clusterId = CLUSTERS.find(c => c.name === editForm.subject)?.id;
     await base44.entities.CurriculumBook.update(book.id, {
       name: editForm.name.trim(),
       subject: editForm.subject,
       kid: editForm.kid,
       grade_level: editForm.grade_level.trim(),
-      cluster_tags: clusterId ? [clusterId] : [],
     });
     setSavingInfo(false);
     setEditingInfo(false);
