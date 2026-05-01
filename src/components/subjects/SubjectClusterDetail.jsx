@@ -24,6 +24,12 @@ const GENRE_TO_CLUSTER = {
   "Reading": "language-literacy",
   "Fiction": "language-literacy",
   "Poetry": "language-literacy",
+  "Nonfiction": "world-society",
+  "Biography": "world-society",
+  "Mystery": "language-literacy",
+  "Adventure": "language-literacy",
+  "Fantasy": "language-literacy",
+  "Science Fiction": "nature-science",
   "Math": "math-logic",
   "Science": "nature-science",
   "History": "world-society",
@@ -105,7 +111,7 @@ export default function SubjectClusterDetail({ cluster, onClose }) {
   };
 
   return (
-    <div className="h-full bg-white overflow-y-auto flex flex-col">
+    <div className="flex-1 bg-white overflow-y-auto flex flex-col">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white border-b border-border">
         <div className="px-6 py-4">
