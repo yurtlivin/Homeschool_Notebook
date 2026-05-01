@@ -30,9 +30,10 @@ export default function SubjectClusterDetail({ cluster, onClose }) {
       db.media.list(),
     ]);
 
-    // Get lesson_tags, lesson_books, media_tags junctions
-    const [lessonTagLinks, lessonBookLinks, mediaTagLinks] = await Promise.all([
+    // Get lesson_tags, book_tags, lesson_books, media_tags junctions
+    const [lessonTagLinks, bookTagLinks, lessonBookLinks, mediaTagLinks] = await Promise.all([
       db.lessonTags.list(),
+      db.bookTags.list(),
       db.lessonBooks.list(),
       db.mediaTags.list(),
     ]);
@@ -43,18 +44,19 @@ export default function SubjectClusterDetail({ cluster, onClose }) {
     // Lessons (LogEntry type)
     allLessons.forEach(lesson => {
       const hasClusterTag = lessonTagLinks.some(lt => lt.lesson_id === lesson.id && clusterTags.includes(lt.tag_id));
-      if (hasClusterTag && (kid === "Both" || lesson.child_id === kid)) {
+      if (hasClusterTag && (kid === "Both" || lesson.kid === kid)) {
         filtered.push({ type: "log", data: lesson });
       }
     });
 
     // Books (Book & CurriculumBook type)
     allBooks.forEach(book => {
-      const hasClusterTag = lessonBookLinks.some(lb => lb.book_id === book.id) ||
-        clusterTags.some(tagId => allTags.find(t => t.id === tagId)); // Simplified; adjust per your book tagging
-      if (kid === "Both" || book.child_id === kid) {
+      const hasClusterTag = bookTagLinks.some(bt => bt.book_id === book.id && clusterTags.includes(bt.tag_id));
+      if (hasClusterTag && (kid === "Both" || book.kid === kid)) {
+        // Preload tag_ids on book object
+        const tagIds = bookTagLinks.filter(bt => bt.book_id === book.id).map(bt => bt.tag_id);
         // Differentiate by whether it has units (curriculum) or not (reading)
-        filtered.push({ type: book.total_units ? "curriculum" : "book", data: book });
+        filtered.push({ type: book.units ? "curriculum" : "book", data: { ...book, tag_ids: tagIds } });
       }
     });
 

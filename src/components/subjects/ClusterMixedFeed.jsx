@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { BookOpen, BookMarked, LogIn } from "lucide-react";
+import TagBadges from "@/components/tags/TagBadges";
 
 export default function ClusterMixedFeed({ entries, cluster, loading }) {
   if (loading) return <div className="text-sm text-muted-foreground py-8">Loading...</div>;
@@ -31,16 +32,26 @@ export default function ClusterMixedFeed({ entries, cluster, loading }) {
                   </div>
                   <div className="text-sm font-medium text-foreground">{entry.data.title}</div>
                   {entry.data.status && <div className="text-xs text-muted-foreground">{entry.data.status === "finished" ? "✓ Finished" : "Reading"}</div>}
+                  {entry.data.tag_ids && entry.data.tag_ids.length > 0 && (
+                    <div className="mt-2">
+                      <TagBadges tagIds={entry.data.tag_ids} limit={2} />
+                    </div>
+                  )}
                 </>
               )}
               {entry.type === "curriculum" && (
                 <>
                   <div className="text-xs text-muted-foreground mb-1">
-                    {entry.data.created_date ? format(new Date(entry.data.created_date), "MMM d, yyyy") : "No date"} · {entry.data.child_id}
+                    {entry.data.created_date ? format(new Date(entry.data.created_date), "MMM d, yyyy") : "No date"} · {entry.data.kid}
                   </div>
-                  <div className="text-sm font-medium text-foreground">{entry.data.title}</div>
-                  {entry.data.completed_units !== undefined && (
-                    <div className="text-xs text-muted-foreground mt-1">{entry.data.completed_units}/{entry.data.total_units} units completed</div>
+                  <div className="text-sm font-medium text-foreground">{entry.data.name}</div>
+                  {entry.data.units && (
+                    <div className="text-xs text-muted-foreground mt-1">{entry.data.units.filter(u => u.completed).length}/{entry.data.units.length} units completed</div>
+                  )}
+                  {entry.data.tag_ids && entry.data.tag_ids.length > 0 && (
+                    <div className="mt-2">
+                      <TagBadges tagIds={entry.data.tag_ids} limit={2} />
+                    </div>
                   )}
                 </>
               )}
