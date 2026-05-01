@@ -195,13 +195,7 @@ Return ONLY a JSON object with a "units" array where each item is a separate cha
       ...(tab === "scan" && scanFileUrl ? { cover_image: scanFileUrl } : {})
     });
 
-    // Link tags if any selected
-    if (book && selectedTagIds.length > 0) {
-      const db = (await import("@/lib/supabaseClient")).default;
-      await Promise.all(selectedTagIds.map(tagId =>
-        db.bookTags.create({ book_id: book.id, tag_id: tagId })
-      ));
-    }
+
 
     setSaving(false);
     onAdded();
