@@ -1,16 +1,20 @@
 import { useState, useEffect } from "react";
 import db from "@/lib/supabaseClient";
-import { X, BookOpen, BookMarked, LogIn } from "lucide-react";
-import { CLUSTER_MAP } from "@/lib/subjectsClusters";
+import { X } from "lucide-react";
 import ClusterMixedFeed from "./ClusterMixedFeed";
 import ClusterPhotosStrip from "./ClusterPhotosStrip";
 import ClusterNotespad from "./ClusterNotespad";
 
 export default function SubjectClusterDetail({ cluster, onClose }) {
   const [kid, setKid] = useState("Both");
+  const [children, setChildren] = useState([]);
   const [entries, setEntries] = useState([]);
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    db.children.list().then(setChildren);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -19,69 +23,72 @@ export default function SubjectClusterDetail({ cluster, onClose }) {
   const loadData = async () => {
     setLoading(true);
 
-    // Get all category tags for this cluster
     const allTags = await db.tags.list();
-    const clusterTags = allTags.filter(t => t.category_id === cluster.id).map(t => t.id);
+    const clusterTags = allTags
+      .filter(t => t.category_id === cluster.id)
+      .map(t => t.id);
 
-    // Fetch lessons, books, and media linked to these tags
     const [allLessons, allBooks, allMedia] = await Promise.all([
       db.lessons.list(),
       db.books.list(),
       db.media.list(),
     ]);
 
-    // Get lesson_tags, lesson_books, media_tags junctions
     const [lessonTagLinks, lessonBookLinks, mediaTagLinks] = await Promise.all([
       db.lessonTags.list(),
       db.lessonBooks.list(),
       db.mediaTags.list(),
     ]);
 
-    // Filter entries by cluster tags and kid
     const filtered = [];
 
-    // Lessons (LogEntry type)
     allLessons.forEach(lesson => {
-      const hasClusterTag = lessonTagLinks.some(lt => lt.lesson_id === lesson.id && clusterTags.includes(lt.tag_id));
-      if (hasClusterTag && (kid === "Both" || lesson.kid === kid)) {
+      const hasClusterTag = lessonTagLinks.some(
+        lt => lt.lesson_id === lesson.id && clusterTags.includes(lt.tag_id)
+      );
+      const kidMatch = kid === "Both" || lesson.child_id === kid;
+      if (hasClusterTag && kidMatch) {
         filtered.push({ type: "log", data: lesson });
       }
     });
 
-    // Books (Book & CurriculumBook type)
     allBooks.forEach(book => {
-      if (kid === "Both" || book.child_id === kid) {
-        // Differentiate by whether it has units (curriculum) or not (reading)
-        filtered.push({ type: book.units ? "curriculum" : "book", data: book });
+      const kidMatch = kid === "Both" || book.child_id === kid;
+      if (kidMatch) {
+        filtered.push({ type: book.total_units ? "curriculum" : "book", data: book });
       }
     });
 
-    // Media (Photo type)
     allMedia.forEach(m => {
-      const hasClusterTag = mediaTagLinks.some(mt => mt.media_id === m.id && clusterTags.includes(mt.tag_id));
-      if (hasClusterTag && (kid === "Both" || m.child_id === kid)) {
+      const hasClusterTag = mediaTagLinks.some(
+        mt => mt.media_id === m.id && clusterTags.includes(mt.tag_id)
+      );
+      const kidMatch = kid === "Both" || m.child_id === kid;
+      if (hasClusterTag && kidMatch) {
         filtered.push({ type: "media", data: m });
       }
     });
 
-    // Sort by date, reverse chronological
     filtered.sort((a, b) => {
-      const dateA = a.data.date || a.data.created_date || a.data.date_added;
-      const dateB = b.data.date || b.data.created_date || b.data.date_added;
+      const dateA = a.data.date || a.data.created_at || a.data.date_added;
+      const dateB = b.data.date || b.data.created_at || b.data.date_added;
       return new Date(dateB) - new Date(dateA);
     });
 
-    setEntries(filtered);
-    setPhotos(allMedia.filter(m => {
-      const hasClusterTag = mediaTagLinks.some(mt => mt.media_id === m.id && clusterTags.includes(mt.tag_id));
+    const filteredPhotos = allMedia.filter(m => {
+      const hasClusterTag = mediaTagLinks.some(
+        mt => mt.media_id === m.id && clusterTags.includes(mt.tag_id)
+      );
       return hasClusterTag && (kid === "Both" || m.child_id === kid);
-    }));
+    });
+
+    setEntries(filtered);
+    setPhotos(filteredPhotos);
     setLoading(false);
   };
 
   return (
     <div className="flex-1 bg-white overflow-y-auto flex flex-col">
-      {/* Header */}
       <div className="sticky top-0 z-40 bg-white border-b border-border">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between mb-4">
@@ -94,36 +101,27 @@ export default function SubjectClusterDetail({ cluster, onClose }) {
             </button>
           </div>
 
-          {/* Kid toggle */}
           <div className="flex gap-2">
-            {["Both", "Tigerlily", "Rowen"].map(k => (
+            <button
+              onClick={() => setKid("Both")}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${kid === "Both" ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:bg-muted"}`}
+            >Both</button>
+            {children.map(c => (
               <button
-                key={k}
-                onClick={() => setKid(k)}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                  kid === k
-                    ? "bg-foreground text-background border-foreground"
-                    : "border-border text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                {k}
-              </button>
+                key={c.id}
+                onClick={() => setKid(c.id)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${kid === c.id ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:bg-muted"}`}
+              >{c.name}</button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Content */}
       <div className="px-6 py-5 space-y-6 flex-1">
-        {/* Photos strip */}
         {photos.length > 0 && (
           <ClusterPhotosStrip photos={photos} cluster={cluster} />
         )}
-
-        {/* Mixed feed */}
         <ClusterMixedFeed entries={entries} cluster={cluster} loading={loading} />
-
-        {/* Notes scratchpad */}
         <ClusterNotespad cluster={cluster} kid={kid} />
       </div>
     </div>
