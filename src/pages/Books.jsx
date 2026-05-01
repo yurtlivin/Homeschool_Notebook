@@ -1,60 +1,68 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
-import { useUser } from "@/lib/userContext";
+import { books as booksApi, children as childrenApi } from "@/lib/supabaseClient";
 import { format } from "date-fns";
-import { Plus, RotateCcw, ChevronDown, ChevronUp, Star } from "lucide-react";
+import { Plus, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
 
-const FILTERS = ["All", "Tigerlily", "Rowen", "Reading", "Finished"];
+const STATUSES = ["All", "active", "finished"];
 
 export default function Books() {
-  const { activeUser } = useUser();
   const [books, setBooks] = useState([]);
+  const [children, setChildren] = useState([]);
   const [filter, setFilter] = useState("All");
+  const [childFilter, setChildFilter] = useState("All");
   const [expanded, setExpanded] = useState({});
-  const [form, setForm] = useState({ title: "", kid: "Tigerlily", status: "reading", genre: "" });
+  const [form, setForm] = useState({ title: "", child_id: "", status: "active" });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { loadBooks(); }, []);
+  useEffect(() => { loadAll(); }, []);
 
-  const loadBooks = async () => {
+  const loadAll = async () => {
     setLoading(true);
-    const data = await base44.entities.Book.list("-created_date", 200);
-    setBooks(data);
+    const [booksData, childrenData] = await Promise.all([
+      booksApi.list(),
+      childrenApi.list(),
+    ]);
+    setBooks(booksData);
+    setChildren(childrenData);
+    if (childrenData.length > 0 && !form.child_id) {
+      setForm(f => ({ ...f, child_id: childrenData[0].id }));
+    }
     setLoading(false);
   };
 
   const addBook = async () => {
-    if (!form.title.trim()) return;
-    await base44.entities.Book.create({
+    if (!form.title.trim() || !form.child_id) return;
+    await booksApi.create({
       ...form,
-      added_by: activeUser,
-      date_added: format(new Date(), "yyyy-MM-dd"),
+      created_at: new Date().toISOString(),
     });
-    setForm({ title: "", kid: "Tigerlily", status: "reading", genre: "" });
-    loadBooks();
+    setForm(f => ({ ...f, title: "" }));
+    loadAll();
   };
 
   const cycleStatus = async (book) => {
-    const next = book.status === "reading" ? "finished" : "reading";
-    await base44.entities.Book.update(book.id, { status: next });
-    loadBooks();
+    const next = book.status === "active" ? "finished" : "active";
+    await booksApi.update(book.id, { status: next });
+    loadAll();
   };
 
   const updateBook = async (id, changes) => {
-    await base44.entities.Book.update(id, changes);
-    loadBooks();
+    await booksApi.update(id, changes);
+    loadAll();
   };
 
+  const childName = (id) => children.find(c => c.id === id)?.name || "";
+
   const filtered = books.filter(b => {
-    if (filter === "All") return true;
-    if (filter === "Tigerlily" || filter === "Rowen") return b.kid === filter;
-    if (filter === "Reading") return b.status === "reading";
-    if (filter === "Finished") return b.status === "finished";
-    return true;
+    const statusMatch = filter === "All" || b.status === filter;
+    const childMatch = childFilter === "All" || b.child_id === childFilter;
+    return statusMatch && childMatch;
   });
 
-  const tigerlily = books.filter(b => b.kid === "Tigerlily");
-  const rowen = books.filter(b => b.kid === "Rowen");
+  const statsFor = (childId) => ({
+    active: books.filter(b => b.child_id === childId && b.status === "active").length,
+    finished: books.filter(b => b.child_id === childId && b.status === "finished").length,
+  });
 
   return (
     <div className="px-6 py-5 max-w-3xl">
@@ -62,16 +70,16 @@ export default function Books() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-3 gap-3 mb-5">
-        <div className="bg-white border border-border rounded-md px-4 py-3">
-          <div className="text-xs text-muted-foreground">Tigerlily</div>
-          <div className="text-lg font-semibold">{tigerlily.filter(b => b.status === "reading").length} reading</div>
-          <div className="text-xs text-muted-foreground">{tigerlily.filter(b => b.status === "finished").length} finished</div>
-        </div>
-        <div className="bg-white border border-border rounded-md px-4 py-3">
-          <div className="text-xs text-muted-foreground">Rowen</div>
-          <div className="text-lg font-semibold">{rowen.filter(b => b.status === "reading").length} reading</div>
-          <div className="text-xs text-muted-foreground">{rowen.filter(b => b.status === "finished").length} finished</div>
-        </div>
+        {children.map(child => {
+          const s = statsFor(child.id);
+          return (
+            <div key={child.id} className="bg-white border border-border rounded-md px-4 py-3">
+              <div className="text-xs text-muted-foreground">{child.name}</div>
+              <div className="text-lg font-semibold">{s.active} reading</div>
+              <div className="text-xs text-muted-foreground">{s.finished} finished</div>
+            </div>
+          );
+        })}
         <div className="bg-white border border-border rounded-md px-4 py-3">
           <div className="text-xs text-muted-foreground">All time</div>
           <div className="text-lg font-semibold">{books.length} books</div>
@@ -80,15 +88,28 @@ export default function Books() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-2 mb-4">
-        {FILTERS.map(f => (
+      <div className="flex items-center gap-2 mb-2 flex-wrap">
+        <span className="text-xs text-muted-foreground">Child:</span>
+        <button
+          onClick={() => setChildFilter("All")}
+          className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${childFilter === "All" ? "bg-[#534AB7] text-white border-[#534AB7]" : "border-border text-muted-foreground hover:bg-muted"}`}
+        >All</button>
+        {children.map(c => (
+          <button
+            key={c.id}
+            onClick={() => setChildFilter(c.id)}
+            className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${childFilter === c.id ? "bg-[#534AB7] text-white border-[#534AB7]" : "border-border text-muted-foreground hover:bg-muted"}`}
+          >{c.name}</button>
+        ))}
+      </div>
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <span className="text-xs text-muted-foreground">Status:</span>
+        {STATUSES.map(f => (
           <button
             key={f}
             onClick={() => setFilter(f)}
             className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${filter === f ? "bg-[#534AB7] text-white border-[#534AB7]" : "border-border text-muted-foreground hover:bg-muted"}`}
-          >
-            {f}
-          </button>
+          >{f}</button>
         ))}
       </div>
 
@@ -98,56 +119,30 @@ export default function Books() {
         {filtered.map(book => (
           <div key={book.id} className="bg-white border border-border rounded-md overflow-hidden">
             <div className="flex items-center gap-3 px-4 py-3">
-              <span className={`w-2 h-2 rounded-full shrink-0 ${book.kid === "Tigerlily" ? "bg-green-500" : "bg-amber-500"}`} />
+              <span className={`w-2 h-2 rounded-full shrink-0 ${childName(book.child_id) === "Tigerlily" ? "bg-green-500" : "bg-amber-500"}`} />
               <div className="flex-1 min-w-0">
                 <span className="text-sm font-medium text-foreground">{book.title}</span>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-muted-foreground">{book.kid}</span>
-                  {book.genre && <span className="text-xs text-muted-foreground">· {book.genre}</span>}
-                  {book.date_added && <span className="text-xs text-muted-foreground">· {book.date_added}</span>}
+                  <span className="text-xs text-muted-foreground">{childName(book.child_id)}</span>
                 </div>
               </div>
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${book.status === "finished" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}>
                 {book.status}
               </span>
-              <button
-                onClick={() => cycleStatus(book)}
-                className="p-1.5 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted"
-                title="Toggle status"
-              >
+              <button onClick={() => cycleStatus(book)} className="p-1.5 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted">
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
-              <button
-                onClick={() => setExpanded(p => ({ ...p, [book.id]: !p[book.id] }))}
-                className="p-1.5 text-muted-foreground hover:text-foreground"
-              >
+              <button onClick={() => setExpanded(p => ({ ...p, [book.id]: !p[book.id] }))} className="p-1.5 text-muted-foreground hover:text-foreground">
                 {expanded[book.id] ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
               </button>
             </div>
             {expanded[book.id] && (
               <div className="px-4 pb-3 pt-0 border-t border-border bg-muted/20 space-y-2">
-                <div className="flex gap-1 mt-2">
-                  {[1,2,3,4,5].map(star => (
-                    <button
-                      key={star}
-                      onClick={() => updateBook(book.id, { rating: star })}
-                      className={`text-lg leading-none ${(book.rating || 0) >= star ? "text-amber-400" : "text-muted-foreground/30"}`}
-                    >
-                      ★
-                    </button>
-                  ))}
-                </div>
                 <textarea
                   placeholder="Add a note..."
-                  defaultValue={book.note || ""}
-                  onBlur={e => updateBook(book.id, { note: e.target.value })}
-                  className="w-full text-xs bg-white border border-border rounded px-2.5 py-2 resize-none min-h-[48px] outline-none focus:border-[#534AB7]"
-                />
-                <input
-                  placeholder="Genre (e.g. Fantasy)"
-                  defaultValue={book.genre || ""}
-                  onBlur={e => updateBook(book.id, { genre: e.target.value })}
-                  className="w-full text-xs bg-white border border-border rounded px-2.5 py-1.5 outline-none focus:border-[#534AB7]"
+                  defaultValue={book.notes || ""}
+                  onBlur={e => updateBook(book.id, { notes: e.target.value })}
+                  className="w-full text-xs bg-white border border-border rounded px-2.5 py-2 resize-none min-h-[48px] outline-none focus:border-[#534AB7] mt-2"
                 />
               </div>
             )}
@@ -170,20 +165,21 @@ export default function Books() {
               className="w-full border border-border rounded px-3 py-2 text-sm outline-none focus:border-[#534AB7]"
             />
           </div>
-          <select value={form.kid} onChange={e => setForm(f => ({ ...f, kid: e.target.value }))} className="border border-border rounded px-3 py-2 text-sm outline-none focus:border-[#534AB7]">
-            <option value="Tigerlily">Tigerlily</option>
-            <option value="Rowen">Rowen</option>
+          <select
+            value={form.child_id}
+            onChange={e => setForm(f => ({ ...f, child_id: e.target.value }))}
+            className="border border-border rounded px-3 py-2 text-sm outline-none focus:border-[#534AB7]"
+          >
+            {children.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
-          <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className="border border-border rounded px-3 py-2 text-sm outline-none focus:border-[#534AB7]">
-            <option value="reading">Reading</option>
+          <select
+            value={form.status}
+            onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
+            className="border border-border rounded px-3 py-2 text-sm outline-none focus:border-[#534AB7]"
+          >
+            <option value="active">Reading</option>
             <option value="finished">Finished</option>
           </select>
-          <input
-            value={form.genre}
-            onChange={e => setForm(f => ({ ...f, genre: e.target.value }))}
-            placeholder="Genre (optional)"
-            className="col-span-2 border border-border rounded px-3 py-2 text-sm outline-none focus:border-[#534AB7]"
-          />
         </div>
         <button
           onClick={addBook}
