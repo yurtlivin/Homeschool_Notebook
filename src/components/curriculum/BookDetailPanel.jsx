@@ -42,7 +42,7 @@ export default function BookDetailPanel({ book, onRefresh, onClose }) {
 
   const loadSubjects = async () => {
     const cats = await db.subjectCategories.list();
-    setSubjects(cats.map(c => c.name));
+    setSubjects(cats);
   };
 
   const units = book.units || [];
@@ -212,7 +212,7 @@ Return ONLY a JSON object with a "units" array.`,
                     onChange={e => setEditForm(f => ({ ...f, subject: e.target.value }))}
                     className="flex-1 text-xs border border-border rounded px-2 py-1.5 outline-none focus:border-[#534AB7]"
                   >
-                    {subjects.map(s => <option key={s}>{s}</option>)}
+                    {subjects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
                   </select>
                   <select
                     value={editForm.kid}
