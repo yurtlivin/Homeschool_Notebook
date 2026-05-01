@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import db from "@/lib/supabaseClient";
 
 export default function ClusterTile({ cluster, onSelect }) {
   const [entryCount, setEntryCount] = useState(0);
@@ -11,15 +11,17 @@ export default function ClusterTile({ cluster, onSelect }) {
 
   const loadCount = async () => {
     setLoading(true);
-    const [logs, books] = await Promise.all([
-      base44.entities.LogEntry.list("-date", 500),
-      base44.entities.Book.list("-date_added", 500),
+    const [allTags, lessonTagLinks] = await Promise.all([
+      db.tags.list(),
+      db.lessonTags.list(),
     ]);
-    
-    const logCount = logs.filter(l => l.cluster_tags?.includes(cluster.id)).length;
-    const bookCount = books.filter(b => b.cluster_tags?.includes(cluster.id)).length;
-    
-    setEntryCount(logCount + bookCount);
+    const clusterTagIds = allTags
+      .filter(t => t.category_id === cluster.id)
+      .map(t => t.id);
+    const count = lessonTagLinks.filter(lt =>
+      clusterTagIds.includes(lt.tag_id)
+    ).length;
+    setEntryCount(count);
     setLoading(false);
   };
 
@@ -33,7 +35,7 @@ export default function ClusterTile({ cluster, onSelect }) {
         <div className="text-3xl mb-2">{cluster.icon}</div>
         <div className="text-sm font-semibold text-foreground">{cluster.name}</div>
         <div className="text-xs text-muted-foreground mt-2">
-          {loading ? "..." : `${entryCount} entry${entryCount !== 1 ? "ies" : ""}`}
+          {loading ? "..." : `${entryCount} lesson${entryCount !== 1 ? "s" : ""}`}
         </div>
         {!loading && (
           <div className="mt-3 h-1.5 bg-muted rounded-full overflow-hidden">
