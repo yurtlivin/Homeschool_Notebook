@@ -37,16 +37,13 @@ export const TAGS = [
 ];
 
 export const SUBJECT_COLORS = {
-  Math: "#3B6D11",
-  Reading: "#0C447C",
-  Grammar: "#085041",
-  History: "#72243E",
-  Botany: "#27500A",
-  Science: "#0F6E56",
-  Art: "#534AB7",
-  "Life skills": "#5F5E5A",
-  PE: "#0F6E56",
-  Writing: "#712B13",
+  "Language & Literacy": "#E94B3C",
+  "Math & Logic": "#2E7D32",
+  "World & Society": "#0D47A1",
+  "Nature & Science": "#F57C00",
+  "Body & Movement": "#6A1B9A",
+  "Creative Arts": "#00796B",
+  "Life & Mindfulness": "#C62828",
 };
 
 export const TIGERLILY_ANCHORS = [

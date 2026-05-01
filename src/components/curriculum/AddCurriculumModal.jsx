@@ -1,9 +1,11 @@
 import { useState, useRef } from "react";
+import { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { SUBJECT_COLORS } from "@/lib/constants";
+import { CLUSTERS } from "@/lib/subjectsClusters";
 import { X, Upload, Sparkles, Plus, Trash2 } from "lucide-react";
 
-const SUBJECTS = Object.keys(SUBJECT_COLORS);
+const SUBJECTS = CLUSTERS.map(c => c.name);
 const KIDS = [
   { value: "Tigerlily", label: "Tigerlily" },
   { value: "Rowen", label: "Rowen" },
@@ -18,7 +20,7 @@ export default function AddCurriculumModal({ onClose, onAdded }) {
   // Shared fields
   const [name, setName] = useState("");
   const [kid, setKid] = useState("Tigerlily");
-  const [subject, setSubject] = useState("Math");
+  const [subject, setSubject] = useState(CLUSTERS[0].name);
   const [grade, setGrade] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -165,7 +167,16 @@ Return ONLY a JSON object with a "units" array where each item is a separate cha
         resources: [],
       }));
     }
-    await base44.entities.CurriculumBook.create({ name: name.trim(), kid, subject, grade_level: grade.trim(), units, ...(tab === "scan" && scanFileUrl ? { cover_image: scanFileUrl } : {}) });
+    const clusterId = CLUSTERS.find(c => c.name === subject)?.id;
+    await base44.entities.CurriculumBook.create({
+      name: name.trim(),
+      kid,
+      subject,
+      grade_level: grade.trim(),
+      cluster_tags: clusterId ? [clusterId] : [],
+      units,
+      ...(tab === "scan" && scanFileUrl ? { cover_image: scanFileUrl } : {}),
+    });
     setSaving(false);
     onAdded();
     onClose();
