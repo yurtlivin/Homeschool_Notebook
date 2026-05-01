@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, CalendarDays, BookOpen, FolderOpen, BookMarked, Leaf, ChevronRight } from "lucide-react";
+import { Home, CalendarDays, BookOpen, FolderOpen, BookMarked, Leaf, ChevronRight, Layers } from "lucide-react";
 import { useUser } from "@/lib/userContext";
 import { useState } from "react";
 import UserSwitcher from "./UserSwitcher";
@@ -8,6 +8,7 @@ const NAV = [
 { label: "Home", icon: Home, path: "/" },
 { label: "Planner", icon: CalendarDays, path: "/planner" },
 { label: "Curriculum Planner", icon: BookOpen, path: "/curriculum" },
+{ label: "Subjects", icon: Layers, path: "/subjects" },
 { label: "Portfolio", icon: FolderOpen, path: "/portfolio" },
 { label: "Books", icon: BookMarked, path: "/books" }];
 
