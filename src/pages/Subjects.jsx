@@ -7,29 +7,34 @@ export default function Subjects() {
   const [selectedCluster, setSelectedCluster] = useState(null);
 
   return (
-    <div className="px-6 py-5">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-foreground mb-1">Subjects</h1>
-        <p className="text-sm text-muted-foreground">Explore learning across 7 skill clusters</p>
+    <div className="flex h-screen">
+      {/* Main content */}
+      <div className="flex-1 px-6 py-5 overflow-y-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-foreground mb-1">Subjects</h1>
+          <p className="text-sm text-muted-foreground">Explore learning across 7 skill clusters</p>
+        </div>
+
+        {/* Cluster tiles grid */}
+        <div className="grid grid-cols-4 gap-4 max-w-6xl">
+          {CLUSTERS.map(cluster => (
+            <ClusterTile
+              key={cluster.id}
+              cluster={cluster}
+              onSelect={setSelectedCluster}
+            />
+          ))}
+        </div>
       </div>
 
-      {/* Cluster tiles grid */}
-      <div className="grid grid-cols-4 gap-4">
-        {CLUSTERS.map(cluster => (
-          <ClusterTile
-            key={cluster.id}
-            cluster={cluster}
-            onSelect={setSelectedCluster}
-          />
-        ))}
-      </div>
-
-      {/* Cluster detail drill-down */}
+      {/* Right-side panel */}
       {selectedCluster && (
-        <SubjectClusterDetail
-          cluster={selectedCluster}
-          onClose={() => setSelectedCluster(null)}
-        />
+        <div className="w-[450px] border-l border-border">
+          <SubjectClusterDetail
+            cluster={selectedCluster}
+            onClose={() => setSelectedCluster(null)}
+          />
+        </div>
       )}
     </div>
   );

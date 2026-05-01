@@ -13,6 +13,7 @@ export default function ClusterMixedFeed({ entries, cluster, loading }) {
           <div className="flex items-start gap-3">
             {entry.type === "log" && <LogIn className="w-4 h-4 text-[#534AB7] mt-1 shrink-0" />}
             {entry.type === "book" && <BookMarked className="w-4 h-4 text-amber-600 mt-1 shrink-0" />}
+            {entry.type === "curriculum" && <BookOpen className="w-4 h-4 text-purple-600 mt-1 shrink-0" />}
             <div className="flex-1 min-w-0">
               {entry.type === "log" && (
                 <>
@@ -40,6 +41,18 @@ export default function ClusterMixedFeed({ entries, cluster, loading }) {
                   {entry.data.genre && <div className="text-xs text-muted-foreground">{entry.data.genre}</div>}
                   {entry.data.status === "finished" && (
                     <div className="text-xs text-green-600 mt-1">✓ Finished</div>
+                  )}
+                </>
+              )}
+              {entry.type === "curriculum" && (
+                <>
+                  <div className="text-xs text-muted-foreground mb-1">
+                    {format(new Date(entry.data.created_date + "T00:00:00"), "MMM d, yyyy")} · {entry.data.kid}
+                  </div>
+                  <div className="text-sm font-medium text-foreground">{entry.data.name}</div>
+                  {entry.data.subject && <div className="text-xs text-muted-foreground">{entry.data.subject}</div>}
+                  {entry.data.units?.length > 0 && (
+                    <div className="text-xs text-muted-foreground mt-1">{entry.data.units.filter(u => u.completed).length}/{entry.data.units.length} units completed</div>
                   )}
                 </>
               )}
