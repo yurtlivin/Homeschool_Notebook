@@ -10,7 +10,8 @@ import BulkScheduler from "./BulkScheduler";
 import LessonDetailModal from "./LessonDetailModal";
 
 const TABS = ["Units", "Photos", "Field Trips", "Notes", "Schedule", "Plan"];
-const SUBJECTS = Object.keys(SUBJECT_COLORS);
+// Sync subjects with clusters used in auto-tagging
+const SUBJECTS = ["Math", "English", "Science", "History", "Writing", "Reading", "Art", "Music", "PE"];
 const KIDS = ["Tigerlily", "Rowen", "Both"];
 
 export default function BookDetailPanel({ book, onRefresh, onClose }) {
