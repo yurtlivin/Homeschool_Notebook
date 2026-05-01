@@ -9,7 +9,7 @@ import CompletionDatePicker from "./CompletionDatePicker";
 import BulkScheduler from "./BulkScheduler";
 import LessonDetailModal from "./LessonDetailModal";
 
-const TABS = ["Units", "Photos", "Field Trips", "Notes", "Schedule", "Plan"];
+const TABS = ["Lessons", "Photos", "Field Trips", "Notes", "Schedule", "Plan"];
 // Sync subjects with clusters used in auto-tagging
 const SUBJECTS = ["Math", "English", "Science", "History", "Writing", "Reading", "Art", "Music", "PE"];
 const KIDS = ["Tigerlily", "Rowen", "Both"];
@@ -244,7 +244,7 @@ Return ONLY a JSON object with a "units" array.`,
                 <div className="flex items-center gap-3 mt-2">
                   <div className="flex-1 max-w-xs">
                     <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                      <span>{completed}/{units.length} units</span>
+                      <span>{completed}/{units.length} lessons</span>
                       <span>{pct}%</span>
                     </div>
                     <div className="h-1.5 bg-muted rounded-full overflow-hidden">
@@ -302,8 +302,8 @@ Return ONLY a JSON object with a "units" array.`,
       {/* Tab content */}
       <div className="flex-1 overflow-y-auto px-6 py-4">
 
-        {/* Units */}
-        {tab === "Units" && (
+        {/* Lessons */}
+        {tab === "Lessons" && (
           <div>
             <div className="space-y-0.5 mb-3">
               {units.map(unit => (
@@ -326,7 +326,7 @@ Return ONLY a JSON object with a "units" array.`,
                   )}
                 </div>
               ))}
-              {units.length === 0 && <p className="text-xs text-muted-foreground py-4">No units yet.</p>}
+              {units.length === 0 && <p className="text-xs text-muted-foreground py-4">No lessons yet.</p>}
             </div>
             {addingUnit ? (
               <div className="flex gap-2 mt-2">
@@ -353,7 +353,7 @@ Return ONLY a JSON object with a "units" array.`,
                   <Plus className="w-3 h-3" /> Add unit
                 </button>
                 <button onClick={() => setShowScanModal(true)} className="flex items-center gap-1.5 text-xs text-[#534AB7] border border-[#534AB7]/30 px-2.5 py-1.5 rounded-md hover:bg-[#EEEDFE] transition-colors">
-                  <Sparkles className="w-3 h-3" /> Import with AI
+                  <Sparkles className="w-3 h-3" /> Import lessons with AI
                 </button>
               </div>
             )}
@@ -365,7 +365,7 @@ Return ONLY a JSON object with a "units" array.`,
                   <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-[#534AB7]" />
-                      <span className="text-sm font-semibold">Import units with AI</span>
+                      <span className="text-sm font-semibold">Import lessons with AI</span>
                     </div>
                     <button onClick={() => { setShowScanModal(false); setScanPreview(null); setScannedUnits([]); }}><X className="w-4 h-4 text-muted-foreground" /></button>
                   </div>
@@ -395,7 +395,7 @@ Return ONLY a JSON object with a "units" array.`,
 
                     {scannedUnits.length > 0 && (
                       <div className="space-y-2">
-                        <div className="text-xs font-medium text-[#534AB7]">Found {scannedUnits.length} units — review before importing:</div>
+                        <div className="text-xs font-medium text-[#534AB7]">Found {scannedUnits.length} lessons — review before importing:</div>
                         <div className="space-y-1.5 max-h-48 overflow-y-auto">
                           {scannedUnits.map((u, i) => (
                             <div key={u.id} className="flex items-center gap-2">
@@ -427,7 +427,7 @@ Return ONLY a JSON object with a "units" array.`,
                       disabled={scannedUnits.length === 0}
                       className="text-xs bg-[#534AB7] text-white rounded px-4 py-1.5 hover:bg-[#4340a0] disabled:opacity-50"
                     >
-                      Import {scannedUnits.length > 0 ? `${scannedUnits.length} units` : ""}
+                      Import {scannedUnits.length > 0 ? `${scannedUnits.length} lessons` : ""}
                     </button>
                   </div>
                 </div>
@@ -502,7 +502,7 @@ Return ONLY a JSON object with a "units" array.`,
               </button>
             </div>
             <div>
-              <div className="text-xs text-muted-foreground mb-2">Per-unit notes</div>
+              <div className="text-xs text-muted-foreground mb-2">Per-lesson notes</div>
               <div className="space-y-2">
                 {units.map(u => (
                   <div key={u.id} className="flex items-start gap-2">

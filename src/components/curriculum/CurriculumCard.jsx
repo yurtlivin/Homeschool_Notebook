@@ -5,7 +5,7 @@ import { Check, ChevronDown, ChevronUp, Plus, Camera, Trash2 } from "lucide-reac
 import UnitRow from "./UnitRow";
 import TagBadges from "@/components/tags/TagBadges";
 
-const TABS = ["Units", "Notes", "Field trips"];
+// TABS removed - now inline in component
 
 export default function CurriculumCard({ book, logEntries, onRefresh }) {
   const [open, setOpen] = useState(true);
@@ -159,7 +159,7 @@ export default function CurriculumCard({ book, logEntries, onRefresh }) {
           {/* Progress */}
           <div className="mt-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-              <span>{completed}/{units.length} units</span>
+              <span>{completed}/{units.length} lessons</span>
               {connectedLogs > 0 && (
                 <span className="text-[#534AB7]">{connectedLogs} log{connectedLogs !== 1 ? "s" : ""}</span>
               )}
@@ -214,7 +214,7 @@ export default function CurriculumCard({ book, logEntries, onRefresh }) {
 
           {/* Tabs */}
           <div className="flex border-b border-border px-4">
-            {TABS.map(t => (
+            {["Lessons", "Photos", "Field trips"].map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -225,8 +225,8 @@ export default function CurriculumCard({ book, logEntries, onRefresh }) {
             ))}
           </div>
 
-          {/* Tab: Units */}
-          {tab === "Units" && (
+          {/* Tab: Lessons */}
+          {tab === "Lessons" && (
             <div className="px-4 py-3">
               <div className="space-y-0.5">
                 {visibleUnits.map(unit => (
@@ -245,10 +245,10 @@ export default function CurriculumCard({ book, logEntries, onRefresh }) {
                   onClick={() => setShowAll(p => !p)}
                   className="text-xs text-[#534AB7] hover:underline mt-2"
                 >
-                  {showAll ? "Show less" : `Show all ${units.length} units`}
+                  {showAll ? "Show less" : `Show all ${units.length} lessons`}
                 </button>
               )}
-              {/* Add unit */}
+              {/* Add lesson */}
               {addingUnit ? (
                 <div className="flex gap-2 mt-3">
                   <input
@@ -276,7 +276,7 @@ export default function CurriculumCard({ book, logEntries, onRefresh }) {
                   onClick={() => setAddingUnit(true)}
                   className="flex items-center gap-1 text-xs text-[#534AB7] hover:underline mt-3"
                 >
-                  <Plus className="w-3 h-3" /> Add unit
+                  <Plus className="w-3 h-3" /> Add lesson
                 </button>
               )}
             </div>
@@ -303,7 +303,7 @@ export default function CurriculumCard({ book, logEntries, onRefresh }) {
                 </button>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground mb-2">Per-unit notes</div>
+                <div className="text-xs text-muted-foreground mb-2">Per-lesson notes</div>
                 <div className="space-y-2">
                   {units.map(u => (
                     <div key={u.id} className="flex items-start gap-2">
