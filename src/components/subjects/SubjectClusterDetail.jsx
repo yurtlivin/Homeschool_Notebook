@@ -30,10 +30,9 @@ export default function SubjectClusterDetail({ cluster, onClose }) {
       db.media.list(),
     ]);
 
-    // Get lesson_tags, book_tags, lesson_books, media_tags junctions
-    const [lessonTagLinks, bookTagLinks, lessonBookLinks, mediaTagLinks] = await Promise.all([
+    // Get lesson_tags, lesson_books, media_tags junctions
+    const [lessonTagLinks, lessonBookLinks, mediaTagLinks] = await Promise.all([
       db.lessonTags.list(),
-      db.bookTags.list(),
       db.lessonBooks.list(),
       db.mediaTags.list(),
     ]);
@@ -51,12 +50,9 @@ export default function SubjectClusterDetail({ cluster, onClose }) {
 
     // Books (Book & CurriculumBook type)
     allBooks.forEach(book => {
-      const hasClusterTag = bookTagLinks.some(bt => bt.book_id === book.id && clusterTags.includes(bt.tag_id));
-      if (hasClusterTag && (kid === "Both" || book.kid === kid)) {
-        // Preload tag_ids on book object
-        const tagIds = bookTagLinks.filter(bt => bt.book_id === book.id).map(bt => bt.tag_id);
+      if (kid === "Both" || book.child_id === kid) {
         // Differentiate by whether it has units (curriculum) or not (reading)
-        filtered.push({ type: book.units ? "curriculum" : "book", data: { ...book, tag_ids: tagIds } });
+        filtered.push({ type: book.units ? "curriculum" : "book", data: book });
       }
     });
 
