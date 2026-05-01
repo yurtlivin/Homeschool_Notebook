@@ -1,5 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
+import db from "@/lib/supabaseClient";
 import { SUBJECT_COLORS } from "@/lib/constants";
 import { Camera, Plus, X, Trash2, Check, Pencil, MapPin, Sparkles, Upload, Save, Calendar } from "lucide-react";
 import UnitRow from "./UnitRow";
@@ -10,12 +11,11 @@ import BulkScheduler from "./BulkScheduler";
 import LessonDetailModal from "./LessonDetailModal";
 
 const TABS = ["Lessons", "Photos", "Field Trips", "Notes", "Schedule", "Plan"];
-// Sync subjects with clusters used in auto-tagging
-const SUBJECTS = ["Math", "English", "Science", "History", "Writing", "Reading", "Art", "Music", "PE"];
 const KIDS = ["Tigerlily", "Rowen", "Both"];
 
 export default function BookDetailPanel({ book, onRefresh, onClose }) {
-  const [tab, setTab] = useState("Units");
+  const [tab, setTab] = useState("Lessons");
+  const [subjects, setSubjects] = useState([]);
   const [addingUnit, setAddingUnit] = useState(false);
   const [newUnitName, setNewUnitName] = useState("");
   const [newUnitPages, setNewUnitPages] = useState("");
@@ -35,6 +35,15 @@ export default function BookDetailPanel({ book, onRefresh, onClose }) {
   const [selectedLesson, setSelectedLesson] = useState(null);
   const coverRef = useRef();
   const scanRef = useRef();
+
+  useEffect(() => {
+    loadSubjects();
+  }, []);
+
+  const loadSubjects = async () => {
+    const cats = await db.subjectCategories.list();
+    setSubjects(cats.map(c => c.name));
+  };
 
   const units = book.units || [];
   const fieldTrips = book.field_trips || [];
@@ -203,7 +212,7 @@ Return ONLY a JSON object with a "units" array.`,
                     onChange={e => setEditForm(f => ({ ...f, subject: e.target.value }))}
                     className="flex-1 text-xs border border-border rounded px-2 py-1.5 outline-none focus:border-[#534AB7]"
                   >
-                    {SUBJECTS.map(s => <option key={s}>{s}</option>)}
+                    {subjects.map(s => <option key={s}>{s}</option>)}
                   </select>
                   <select
                     value={editForm.kid}
