@@ -18,42 +18,39 @@ export default function ClusterMixedFeed({ entries, cluster, loading }) {
               {entry.type === "log" && (
                 <>
                   <div className="text-xs text-muted-foreground mb-1">
-                    {format(new Date(entry.data.date + "T00:00:00"), "MMM d, yyyy")} · {entry.data.kid}
+                    {format(new Date(entry.data.date), "MMM d, yyyy")} · {entry.data.child_id}
                   </div>
-                  <p className="text-sm text-foreground">{entry.data.content}</p>
-                  {entry.data.tags?.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {entry.data.tags.map(tag => (
-                        <span key={tag} className="text-[10px] bg-white border border-border rounded-full px-2 py-0.5">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  <p className="text-sm text-foreground">{entry.data.title}</p>
+                  {entry.data.notes && <p className="text-xs text-muted-foreground mt-1">{entry.data.notes}</p>}
                 </>
               )}
               {entry.type === "book" && (
                 <>
                   <div className="text-xs text-muted-foreground mb-1">
-                    {format(new Date(entry.data.date_added + "T00:00:00"), "MMM d, yyyy")} · {entry.data.kid}
+                    {entry.data.created_date ? format(new Date(entry.data.created_date), "MMM d, yyyy") : "No date"} · {entry.data.child_id}
                   </div>
                   <div className="text-sm font-medium text-foreground">{entry.data.title}</div>
-                  {entry.data.genre && <div className="text-xs text-muted-foreground">{entry.data.genre}</div>}
-                  {entry.data.status === "finished" && (
-                    <div className="text-xs text-green-600 mt-1">✓ Finished</div>
-                  )}
+                  {entry.data.status && <div className="text-xs text-muted-foreground">{entry.data.status === "finished" ? "✓ Finished" : "Reading"}</div>}
                 </>
               )}
               {entry.type === "curriculum" && (
                 <>
                   <div className="text-xs text-muted-foreground mb-1">
-                    {format(new Date(entry.data.created_date + "T00:00:00"), "MMM d, yyyy")} · {entry.data.kid}
+                    {entry.data.created_date ? format(new Date(entry.data.created_date), "MMM d, yyyy") : "No date"} · {entry.data.child_id}
                   </div>
-                  <div className="text-sm font-medium text-foreground">{entry.data.name}</div>
-                  {entry.data.subject && <div className="text-xs text-muted-foreground">{entry.data.subject}</div>}
-                  {entry.data.units?.length > 0 && (
-                    <div className="text-xs text-muted-foreground mt-1">{entry.data.units.filter(u => u.completed).length}/{entry.data.units.length} units completed</div>
+                  <div className="text-sm font-medium text-foreground">{entry.data.title}</div>
+                  {entry.data.completed_units !== undefined && (
+                    <div className="text-xs text-muted-foreground mt-1">{entry.data.completed_units}/{entry.data.total_units} units completed</div>
                   )}
+                </>
+              )}
+              {entry.type === "media" && (
+                <>
+                  <div className="text-xs text-muted-foreground mb-1">
+                    {entry.data.created_date ? format(new Date(entry.data.created_date), "MMM d, yyyy") : "No date"}
+                  </div>
+                  <img src={entry.data.storage_url} alt="" className="w-full h-32 object-cover rounded mt-2" />
+                  {entry.data.caption && <p className="text-xs text-muted-foreground mt-1">{entry.data.caption}</p>}
                 </>
               )}
             </div>

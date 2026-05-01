@@ -1,41 +1,10 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import db from "@/lib/supabaseClient";
 import { X, BookOpen, BookMarked, LogIn } from "lucide-react";
 import { CLUSTER_MAP } from "@/lib/subjectsClusters";
 import ClusterMixedFeed from "./ClusterMixedFeed";
 import ClusterPhotosStrip from "./ClusterPhotosStrip";
 import ClusterNotespad from "./ClusterNotespad";
-
-// Map curriculum subjects to cluster IDs
-const SUBJECT_TO_CLUSTER = {
-  "Math": "math-logic",
-  "English": "language-literacy",
-  "Science": "nature-science",
-  "History": "world-society",
-  "Writing": "language-literacy",
-  "Reading": "language-literacy",
-  "Art": "creative-arts",
-  "Music": "creative-arts",
-  "PE": "body-movement",
-};
-
-// Map book genres to cluster IDs
-const GENRE_TO_CLUSTER = {
-  "Reading": "language-literacy",
-  "Fiction": "language-literacy",
-  "Poetry": "language-literacy",
-  "Nonfiction": "world-society",
-  "Biography": "world-society",
-  "Mystery": "language-literacy",
-  "Adventure": "language-literacy",
-  "Fantasy": "language-literacy",
-  "Science Fiction": "nature-science",
-  "Math": "math-logic",
-  "Science": "nature-science",
-  "History": "world-society",
-  "Art": "creative-arts",
-  "Music": "creative-arts",
-};
 
 export default function SubjectClusterDetail({ cluster, onClose }) {
   const [kid, setKid] = useState("Both");
@@ -49,64 +18,66 @@ export default function SubjectClusterDetail({ cluster, onClose }) {
 
   const loadData = async () => {
     setLoading(true);
-    const [logs, books, curriculum, allPhotos] = await Promise.all([
-      base44.entities.LogEntry.list("-date", 500),
-      base44.entities.Book.list("-date_added", 500),
-      base44.entities.CurriculumBook.list("-created_date", 500),
-      base44.entities.Photo.list("-date_uploaded", 500),
+
+    // Get all category tags for this cluster
+    const allTags = await db.tags.list();
+    const clusterTags = allTags.filter(t => t.category_id === cluster.id).map(t => t.id);
+
+    // Fetch lessons, books, and media linked to these tags
+    const [allLessons, allBooks, allMedia] = await Promise.all([
+      db.lessons.list(),
+      db.books.list(),
+      db.media.list(),
     ]);
 
-    // Auto-tag curriculum books by subject and books by genre
-    await Promise.all([
-      ...curriculum.map(async (book) => {
-        const clusterId = SUBJECT_TO_CLUSTER[book.subject];
-        if (clusterId && !book.cluster_tags?.includes(clusterId)) {
-          const updatedTags = [...(book.cluster_tags || []), clusterId];
-          await base44.entities.CurriculumBook.update(book.id, { cluster_tags: updatedTags });
-        }
-      }),
-      ...books.map(async (book) => {
-        const clusterId = GENRE_TO_CLUSTER[book.genre];
-        if (clusterId && !book.cluster_tags?.includes(clusterId)) {
-          const updatedTags = [...(book.cluster_tags || []), clusterId];
-          await base44.entities.Book.update(book.id, { cluster_tags: updatedTags });
-        }
-      }),
+    // Get lesson_tags, lesson_books, media_tags junctions
+    const [lessonTagLinks, lessonBookLinks, mediaTagLinks] = await Promise.all([
+      db.lessonTags.list(),
+      db.lessonBooks.list(),
+      db.mediaTags.list(),
     ]);
 
-    // Fetch updated data
-    const [updatedCurriculum, updatedBooks] = await Promise.all([
-      base44.entities.CurriculumBook.list("-created_date", 500),
-      base44.entities.Book.list("-date_added", 500),
-    ]);
-
-    // Filter by cluster and kid
+    // Filter entries by cluster tags and kid
     const filtered = [];
-    logs.forEach(log => {
-      if (log.cluster_tags?.includes(cluster.id) && (kid === "Both" || log.kid === kid || log.kid === "Both")) {
-        filtered.push({ type: "log", data: log });
+
+    // Lessons (LogEntry type)
+    allLessons.forEach(lesson => {
+      const hasClusterTag = lessonTagLinks.some(lt => lt.lesson_id === lesson.id && clusterTags.includes(lt.tag_id));
+      if (hasClusterTag && (kid === "Both" || lesson.child_id === kid)) {
+        filtered.push({ type: "log", data: lesson });
       }
     });
-    updatedBooks.forEach(book => {
-      if (book.cluster_tags?.includes(cluster.id) && (kid === "Both" || book.kid === kid)) {
-        filtered.push({ type: "book", data: book });
+
+    // Books (Book & CurriculumBook type)
+    allBooks.forEach(book => {
+      const hasClusterTag = lessonBookLinks.some(lb => lb.book_id === book.id) ||
+        clusterTags.some(tagId => allTags.find(t => t.id === tagId)); // Simplified; adjust per your book tagging
+      if (kid === "Both" || book.child_id === kid) {
+        // Differentiate by whether it has units (curriculum) or not (reading)
+        filtered.push({ type: book.total_units ? "curriculum" : "book", data: book });
       }
     });
-    updatedCurriculum.forEach(book => {
-      if (book.cluster_tags?.includes(cluster.id) && (kid === "Both" || book.kid === kid || book.kid === "Both")) {
-        filtered.push({ type: "curriculum", data: book });
+
+    // Media (Photo type)
+    allMedia.forEach(m => {
+      const hasClusterTag = mediaTagLinks.some(mt => mt.media_id === m.id && clusterTags.includes(mt.tag_id));
+      if (hasClusterTag && (kid === "Both" || m.child_id === kid)) {
+        filtered.push({ type: "media", data: m });
       }
     });
 
     // Sort by date, reverse chronological
     filtered.sort((a, b) => {
-      const dateA = a.type === "log" ? a.data.date : (a.type === "book" ? a.data.date_added : a.data.created_date);
-      const dateB = b.type === "log" ? b.data.date : (b.type === "book" ? b.data.date_added : b.data.created_date);
+      const dateA = a.data.date || a.data.created_date || a.data.date_added;
+      const dateB = b.data.date || b.data.created_date || b.data.date_added;
       return new Date(dateB) - new Date(dateA);
     });
 
     setEntries(filtered);
-    setPhotos(allPhotos.filter(p => p.cluster_tags?.includes(cluster.id) && (kid === "Both" || p.child_tags?.includes(kid))));
+    setPhotos(allMedia.filter(m => {
+      const hasClusterTag = mediaTagLinks.some(mt => mt.media_id === m.id && clusterTags.includes(mt.tag_id));
+      return hasClusterTag && (kid === "Both" || m.child_id === kid);
+    }));
     setLoading(false);
   };
 
