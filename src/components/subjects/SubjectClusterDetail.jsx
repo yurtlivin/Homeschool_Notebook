@@ -19,6 +19,18 @@ const SUBJECT_TO_CLUSTER = {
   "PE": "body-movement",
 };
 
+// Map book genres to cluster IDs
+const GENRE_TO_CLUSTER = {
+  "Reading": "language-literacy",
+  "Fiction": "language-literacy",
+  "Poetry": "language-literacy",
+  "Math": "math-logic",
+  "Science": "nature-science",
+  "History": "world-society",
+  "Art": "creative-arts",
+  "Music": "creative-arts",
+};
+
 export default function SubjectClusterDetail({ cluster, onClose }) {
   const [kid, setKid] = useState("Both");
   const [entries, setEntries] = useState([]);
@@ -38,19 +50,29 @@ export default function SubjectClusterDetail({ cluster, onClose }) {
       base44.entities.Photo.list("-date_uploaded", 500),
     ]);
 
-    // Auto-tag curriculum books by subject
-    await Promise.all(
-      curriculum.map(async (book) => {
+    // Auto-tag curriculum books by subject and books by genre
+    await Promise.all([
+      ...curriculum.map(async (book) => {
         const clusterId = SUBJECT_TO_CLUSTER[book.subject];
         if (clusterId && !book.cluster_tags?.includes(clusterId)) {
           const updatedTags = [...(book.cluster_tags || []), clusterId];
           await base44.entities.CurriculumBook.update(book.id, { cluster_tags: updatedTags });
         }
-      })
-    );
+      }),
+      ...books.map(async (book) => {
+        const clusterId = GENRE_TO_CLUSTER[book.genre];
+        if (clusterId && !book.cluster_tags?.includes(clusterId)) {
+          const updatedTags = [...(book.cluster_tags || []), clusterId];
+          await base44.entities.Book.update(book.id, { cluster_tags: updatedTags });
+        }
+      }),
+    ]);
 
-    // Fetch updated curriculum
-    const updatedCurriculum = await base44.entities.CurriculumBook.list("-created_date", 500);
+    // Fetch updated data
+    const [updatedCurriculum, updatedBooks] = await Promise.all([
+      base44.entities.CurriculumBook.list("-created_date", 500),
+      base44.entities.Book.list("-date_added", 500),
+    ]);
 
     // Filter by cluster and kid
     const filtered = [];
@@ -59,7 +81,7 @@ export default function SubjectClusterDetail({ cluster, onClose }) {
         filtered.push({ type: "log", data: log });
       }
     });
-    books.forEach(book => {
+    updatedBooks.forEach(book => {
       if (book.cluster_tags?.includes(cluster.id) && (kid === "Both" || book.kid === kid)) {
         filtered.push({ type: "book", data: book });
       }
