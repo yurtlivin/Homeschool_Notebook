@@ -182,39 +182,39 @@ export default function Home() {
       </div>
 
       {/* Right panel 40% */}
-      <div className="flex-[2] overflow-y-auto px-5 py-5 space-y-4 bg-[#FAFAF8] hidden">
-        <MiniCalendar
-          loggedDates={loggedDates}
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate} />
-        
-        {/* Week strip */}
-        <div className="bg-white border border-border rounded-md p-3 hidden">
-          <div className="text-xs text-muted-foreground mb-2 font-medium">This week</div>
-          <div className="flex gap-1">
-            {eachDayOfInterval({ start: weekStart, end: weekEnd }).
-            filter((d) => d.getDay() >= 1 && d.getDay() <= 5).
-            map((d) => {
-              const ds = format(d, "yyyy-MM-dd");
-              const logged = loggedDates.includes(ds);
-              const isNow = isSameDay(d, new Date());
-              return (
-                <button
-                  key={ds}
-                  onClick={() => setSelectedDate(ds)}
-                  className={`flex-1 flex flex-col items-center py-2 rounded-md transition-colors ${
-                  isNow ? "bg-[#534AB7] text-white" : logged ? "bg-green-50 text-green-700" : "hover:bg-muted text-muted-foreground"}`
-                  }>
-                  
-                    <span className="text-[10px]">{format(d, "EEE")}</span>
-                    <span className="text-sm font-medium mt-0.5">{format(d, "d")}</span>
-                    {logged && !isNow && <span className="w-1 h-1 rounded-full bg-green-500 mt-0.5" />}
-                  </button>);
+      
 
-            })}
-          </div>
-        </div>
-      </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      
     </div>);
 
 }
