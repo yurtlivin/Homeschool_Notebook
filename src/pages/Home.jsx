@@ -13,6 +13,7 @@ import LogEntryCard from "@/components/home/LogEntryCard";
 import MiniCalendar from "@/components/home/MiniCalendar";
 import DailyKidList from "@/components/home/DailyKidList";
 import { Plus, Filter } from "lucide-react";
+import PhotoUpload from "@/components/home/PhotoUpload.jsx";
 
 export default function Home() {
   const { activeUser, getAvatar } = useUser();
@@ -157,6 +158,8 @@ export default function Home() {
         <QuickAddLesson date={selectedDate} onAdded={loadData} />
 
         <QuickAddMoment date={selectedDate} onAdded={loadData} />
+
+        <PhotoUpload />
 
         {/* Log entries */}
         <div>
