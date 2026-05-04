@@ -13,7 +13,7 @@ import LogEntryCard from "@/components/home/LogEntryCard";
 import MiniCalendar from "@/components/home/MiniCalendar";
 import DailyKidList from "@/components/home/DailyKidList";
 import { Plus, Filter } from "lucide-react";
-import PhotoUpload from "@/components/home/PhotoUpload.jsx";
+import PhotoUpload from "@/components/home/PhotoUpload";
 
 export default function Home() {
   const { activeUser, getAvatar } = useUser();
