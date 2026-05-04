@@ -20,10 +20,12 @@ export const children = {
   },
 };
 
-// ── SUBJECT CATEGORIES (7 main clusters) ──
+// ── SUBJECT CATEGORIES (hs_subject_categories) ──
 export const subjectCategories = {
   list: async () => {
-    const res = await base44.integrations.custom.call(CORE, 'get:/subject_categories', {});
+    const res = await base44.integrations.custom.call(CORE, 'get:/subject_categories', {
+      queryParams: { active: true }
+    });
     return res.success ? res.data : [];
   },
   get: async (id) => {
