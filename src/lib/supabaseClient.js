@@ -1,15 +1,29 @@
 import { base44 } from '@/api/base44Client';
 
 // Data access layer wrapping custom homeschool integrations
-// All tag references are by tag_id, never text strings
+// Table mapping: integration endpoint → actual Supabase table
+//   homeschool-core:
+//     /subject_categories → hs_subject_categories
+//     /tags               → hs_tags
+//     /children           → hs_children
+//     /books              → hs_books
+//     /lessons            → hs_lessons
+//   homeschool-relationships:
+//     /lesson_tags        → hs_lesson_tags
+//     /lesson_books       → hs_child_books
+//     /media              → hs_media
+//     /media_tags         → hs_media_tags
 
 const CORE = 'homeschool-core';
 const RELATIONS = 'homeschool-relationships';
 
-// ── CHILDREN ──
+// ── hs_children ──
+// columns: id, name, preferred_name, birthdate, grade_level, color_hex, avatar_url, sort_order, active
 export const children = {
   list: async () => {
-    const res = await base44.integrations.custom.call(CORE, 'get:/children', {});
+    const res = await base44.integrations.custom.call(CORE, 'get:/children', {
+      queryParams: { active: true }
+    });
     return res.success ? res.data : [];
   },
   get: async (id) => {
@@ -18,9 +32,18 @@ export const children = {
     });
     return res.success ? res.data[0] : null;
   },
+  create: async (data) => {
+    const res = await base44.integrations.custom.call(CORE, 'post:/children', { payload: data });
+    return res.success ? res.data : null;
+  },
+  update: async (id, data) => {
+    const res = await base44.integrations.custom.call(CORE, 'patch:/children', { payload: { id, ...data } });
+    return res.success ? res.data : null;
+  },
 };
 
-// ── SUBJECT CATEGORIES (hs_subject_categories) ──
+// ── hs_subject_categories ──
+// columns: id, name, color_hex, icon, sort_order, active
 export const subjectCategories = {
   list: async () => {
     const res = await base44.integrations.custom.call(CORE, 'get:/subject_categories', {
@@ -34,142 +57,105 @@ export const subjectCategories = {
     });
     return res.success ? res.data[0] : null;
   },
-  create: async (data) => {
-    const res = await base44.integrations.custom.call(CORE, 'post:/subject_categories', {
-      payload: data
+};
+
+// ── hs_tags ──
+// columns: id, name, category_id, sort_order, active
+export const tags = {
+  list: async () => {
+    const res = await base44.integrations.custom.call(CORE, 'get:/tags', {
+      queryParams: { active: true }
     });
-    return res.success ? res.data : null;
+    return res.success ? res.data : [];
   },
-  update: async (id, data) => {
-    const res = await base44.integrations.custom.call(CORE, 'patch:/subject_categories', {
-      payload: { id, ...data }
-    });
+  filter: async (query) => {
+    const res = await base44.integrations.custom.call(CORE, 'get:/tags', { queryParams: query });
+    return res.success ? res.data : [];
+  },
+  get: async (id) => {
+    const res = await base44.integrations.custom.call(CORE, 'get:/tags', { queryParams: { id } });
+    return res.success ? res.data[0] : null;
+  },
+  create: async (data) => {
+    const res = await base44.integrations.custom.call(CORE, 'post:/tags', { payload: data });
     return res.success ? res.data : null;
   },
 };
 
-// ── BOOKS (curriculum & reading, consolidated) ──
+// ── hs_books ──
+// columns: id, title, subtitle, author, publisher, cover_url, category_id, description, notes, active
 export const books = {
   list: async () => {
-    const res = await base44.integrations.custom.call(CORE, 'get:/books', {});
+    const res = await base44.integrations.custom.call(CORE, 'get:/books', {
+      queryParams: { active: true }
+    });
     return res.success ? res.data : [];
   },
   filter: async (query) => {
-    // Query by child_id, status, etc.
-    const res = await base44.integrations.custom.call(CORE, 'get:/books', {
-      queryParams: query
-    });
+    const res = await base44.integrations.custom.call(CORE, 'get:/books', { queryParams: query });
     return res.success ? res.data : [];
   },
   get: async (id) => {
-    const res = await base44.integrations.custom.call(CORE, 'get:/books', {
-      queryParams: { id }
-    });
+    const res = await base44.integrations.custom.call(CORE, 'get:/books', { queryParams: { id } });
     return res.success ? res.data[0] : null;
   },
   create: async (data) => {
-    const res = await base44.integrations.custom.call(CORE, 'post:/books', {
-      payload: data
-    });
+    const res = await base44.integrations.custom.call(CORE, 'post:/books', { payload: data });
     return res.success ? res.data : null;
   },
   update: async (id, data) => {
-    const res = await base44.integrations.custom.call(CORE, 'patch:/books', {
-      payload: { id, ...data }
-    });
+    const res = await base44.integrations.custom.call(CORE, 'patch:/books', { payload: { id, ...data } });
     return res.success ? res.data : null;
   },
   delete: async (id) => {
-    const res = await base44.integrations.custom.call(CORE, 'delete:/books', {
-      payload: { id }
-    });
+    const res = await base44.integrations.custom.call(CORE, 'delete:/books', { payload: { id } });
     return res.success;
   },
 };
 
-// ── LESSONS (logs, planner, anchors — all lessons with tags) ──
+// ── hs_lessons ──
+// columns: id, date, title, description, duration_minutes, category_id, activity_type_id,
+//          emotional_tone_id, location_id, is_life_moment, created_at
 export const lessons = {
   list: async () => {
     const res = await base44.integrations.custom.call(CORE, 'get:/lessons', {});
     return res.success ? res.data : [];
   },
   filter: async (query) => {
-    // Query by child_id, date, tag filters, etc.
-    const res = await base44.integrations.custom.call(CORE, 'get:/lessons', {
-      queryParams: query
-    });
+    const res = await base44.integrations.custom.call(CORE, 'get:/lessons', { queryParams: query });
     return res.success ? res.data : [];
   },
   get: async (id) => {
-    const res = await base44.integrations.custom.call(CORE, 'get:/lessons', {
-      queryParams: { id }
-    });
+    const res = await base44.integrations.custom.call(CORE, 'get:/lessons', { queryParams: { id } });
     return res.success ? res.data[0] : null;
   },
   create: async (data) => {
-    const res = await base44.integrations.custom.call(CORE, 'post:/lessons', {
-      payload: data
-    });
+    const res = await base44.integrations.custom.call(CORE, 'post:/lessons', { payload: data });
     return res.success ? res.data : null;
   },
   update: async (id, data) => {
-    const res = await base44.integrations.custom.call(CORE, 'patch:/lessons', {
-      payload: { id, ...data }
-    });
+    const res = await base44.integrations.custom.call(CORE, 'patch:/lessons', { payload: { id, ...data } });
     return res.success ? res.data : null;
   },
   delete: async (id) => {
-    const res = await base44.integrations.custom.call(CORE, 'delete:/lessons', {
-      payload: { id }
-    });
+    const res = await base44.integrations.custom.call(CORE, 'delete:/lessons', { payload: { id } });
     return res.success;
   },
 };
 
-// ── TAGS (granular topics: multiplication, division, etc.) ──
-export const tags = {
-  list: async () => {
-    const res = await base44.integrations.custom.call(CORE, 'get:/tags', {});
-    return res.success ? res.data : [];
-  },
-  filter: async (query) => {
-    // Query by category_id, name, etc.
-    const res = await base44.integrations.custom.call(CORE, 'get:/tags', {
-      queryParams: query
-    });
-    return res.success ? res.data : [];
-  },
-  get: async (id) => {
-    const res = await base44.integrations.custom.call(CORE, 'get:/tags', {
-      queryParams: { id }
-    });
-    return res.success ? res.data[0] : null;
-  },
-  create: async (data) => {
-    const res = await base44.integrations.custom.call(CORE, 'post:/tags', {
-      payload: data
-    });
-    return res.success ? res.data : null;
-  },
-};
-
-// ── LESSON_TAGS (junction: link lessons to tags) ──
+// ── hs_lesson_tags (junction) ──
+// columns: lesson_id, tag_id
 export const lessonTags = {
   list: async () => {
     const res = await base44.integrations.custom.call(RELATIONS, 'get:/lesson_tags', {});
     return res.success ? res.data : [];
   },
   filter: async (query) => {
-    // Query by lesson_id, tag_id, etc.
-    const res = await base44.integrations.custom.call(RELATIONS, 'get:/lesson_tags', {
-      queryParams: query
-    });
+    const res = await base44.integrations.custom.call(RELATIONS, 'get:/lesson_tags', { queryParams: query });
     return res.success ? res.data : [];
   },
   create: async (data) => {
-    const res = await base44.integrations.custom.call(RELATIONS, 'post:/lesson_tags', {
-      payload: data
-    });
+    const res = await base44.integrations.custom.call(RELATIONS, 'post:/lesson_tags', { payload: data });
     return res.success ? res.data : null;
   },
   delete: async (lessonId, tagId) => {
@@ -180,22 +166,19 @@ export const lessonTags = {
   },
 };
 
-// ── LESSON_BOOKS (junction: link lessons to books/curriculum & books to tags) ──
+// ── hs_child_books (junction) ──
+// columns: id, child_id, book_id, status, started_at, finished_at
 export const lessonBooks = {
   list: async () => {
     const res = await base44.integrations.custom.call(RELATIONS, 'get:/lesson_books', {});
     return res.success ? res.data : [];
   },
   filter: async (query) => {
-    const res = await base44.integrations.custom.call(RELATIONS, 'get:/lesson_books', {
-      queryParams: query
-    });
+    const res = await base44.integrations.custom.call(RELATIONS, 'get:/lesson_books', { queryParams: query });
     return res.success ? res.data : [];
   },
   create: async (data) => {
-    const res = await base44.integrations.custom.call(RELATIONS, 'post:/lesson_books', {
-      payload: data
-    });
+    const res = await base44.integrations.custom.call(RELATIONS, 'post:/lesson_books', { payload: data });
     return res.success ? res.data : null;
   },
   delete: async (lessonId, bookId) => {
@@ -206,63 +189,50 @@ export const lessonBooks = {
   },
 };
 
-
-
-// ── MEDIA (photos, videos, etc. — linked to lessons) ──
+// ── hs_media ──
+// columns: id, storage_url, filename_original, category_id, date_taken, school_year_week,
+//          caption, notes, location_id, activity_type_id, emotional_tone_id,
+//          source_type_id, is_portfolio_asset, created_at
 export const media = {
   list: async () => {
     const res = await base44.integrations.custom.call(RELATIONS, 'get:/media', {});
     return res.success ? res.data : [];
   },
   filter: async (query) => {
-    // Query by lesson_id, child_id, media_type, etc.
-    const res = await base44.integrations.custom.call(RELATIONS, 'get:/media', {
-      queryParams: query
-    });
+    const res = await base44.integrations.custom.call(RELATIONS, 'get:/media', { queryParams: query });
     return res.success ? res.data : [];
   },
   get: async (id) => {
-    const res = await base44.integrations.custom.call(RELATIONS, 'get:/media', {
-      queryParams: { id }
-    });
+    const res = await base44.integrations.custom.call(RELATIONS, 'get:/media', { queryParams: { id } });
     return res.success ? res.data[0] : null;
   },
   create: async (data) => {
-    const res = await base44.integrations.custom.call(RELATIONS, 'post:/media', {
-      payload: data
-    });
+    const res = await base44.integrations.custom.call(RELATIONS, 'post:/media', { payload: data });
     return res.success ? res.data : null;
   },
   update: async (id, data) => {
-    const res = await base44.integrations.custom.call(RELATIONS, 'patch:/media', {
-      payload: { id, ...data }
-    });
+    const res = await base44.integrations.custom.call(RELATIONS, 'patch:/media', { payload: { id, ...data } });
     return res.success ? res.data : null;
   },
   delete: async (id) => {
-    const res = await base44.integrations.custom.call(RELATIONS, 'delete:/media', {
-      payload: { id }
-    });
+    const res = await base44.integrations.custom.call(RELATIONS, 'delete:/media', { payload: { id } });
     return res.success;
   },
 };
 
-// ── MEDIA_TAGS (junction: link media to tags) ──
+// ── hs_media_tags (junction) ──
+// columns: media_id, tag_id
 export const mediaTags = {
   list: async () => {
     const res = await base44.integrations.custom.call(RELATIONS, 'get:/media_tags', {});
     return res.success ? res.data : [];
   },
   filter: async (query) => {
-    const res = await base44.integrations.custom.call(RELATIONS, 'get:/media_tags', {
-      queryParams: query
-    });
+    const res = await base44.integrations.custom.call(RELATIONS, 'get:/media_tags', { queryParams: query });
     return res.success ? res.data : [];
   },
   create: async (data) => {
-    const res = await base44.integrations.custom.call(RELATIONS, 'post:/media_tags', {
-      payload: data
-    });
+    const res = await base44.integrations.custom.call(RELATIONS, 'post:/media_tags', { payload: data });
     return res.success ? res.data : null;
   },
   delete: async (mediaId, tagId) => {
