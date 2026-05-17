@@ -46,9 +46,7 @@ export const children = {
 // columns: id, name, color_hex, icon, sort_order, active
 export const subjectCategories = {
   list: async () => {
-    const res = await base44.integrations.custom.call(CORE, 'get:/subject_categories', {
-      queryParams: { active: true }
-    });
+    const res = await base44.integrations.custom.call(CORE, 'get:/subject_categories', {});
     return res.success ? res.data : [];
   },
   get: async (id) => {
